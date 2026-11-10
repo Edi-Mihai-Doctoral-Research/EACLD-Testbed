@@ -4,6 +4,10 @@ Evidence-Adaptive Cross-Layer Diagnosis (EACLD) — Distributed Experimental Tes
 
 This repository contains the initial implementation structure defined in the EACLD experimental testbed technical architecture specification (V1), maintained in the TUIAȘI research directory.
 
+## Project status and continuation
+
+**[PROJECT_STATUS.md](PROJECT_STATUS.md)** is the authoritative implementation status and continuation log. It records completed work, verification, the exact next component, source documents, and decisions needed to resume work in a new session. Update it whenever the implementation progresses.
+
 ## Virtual machine allocation
 
 | Virtual machine | Repository directory | Services |
@@ -40,4 +44,4 @@ Private intervention parameters and ground-truth data remain on VM-CONTROL and a
 
 The existing E0 computational artifact is reused on VM-CORE through `LiveEnvironment`; `eacld/core.py` is not rewritten.
 
-**Current status:** Shared communication contracts and the initial VM-CONTROL service implementation are available. Other distributed application services are not yet implemented.
+Implementation status and next steps are maintained in [PROJECT_STATUS.md](PROJECT_STATUS.md).

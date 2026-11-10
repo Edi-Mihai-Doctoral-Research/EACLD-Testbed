@@ -31,3 +31,7 @@ venv/
 nodes/config/nodes.json
 nodes/secrets/**
 !nodes/secrets/.gitkeep
+
+# VM-EDGE private MQTT credentials
+edge/secrets/**
+!edge/secrets/.gitkeep

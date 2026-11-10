@@ -1,22 +1,22 @@
 # EACLD-Testbed
 
-Evidence-Adaptive Cross-Layer Diagnosis (EACLD) — testbed experimental distribuit.
+Evidence-Adaptive Cross-Layer Diagnosis (EACLD) — Distributed Experimental Testbed.
 
-Acest repository conține structura de lucru a implementării, conform documentului **EACLD – Arhitectura și implementarea testbedului experimental – V1** din directorul de cercetare TUIAȘI.
+This repository contains the initial implementation structure defined in the EACLD experimental testbed technical architecture specification (V1), maintained in the TUIAȘI research directory.
 
-## Distribuția pe mașini virtuale
+## Virtual machine allocation
 
-| Mașină virtuală | Director din repository | Servicii |
+| Virtual machine | Repository directory | Services |
 | --- | --- | --- |
 | VM-CONTROL | `control/` | `eacld-control` |
 | VM-NODES | `nodes/` | `eacld-nodes` |
 | VM-REFERENCE | `reference/` | `eacld-reference` |
 | VM-EDGE | `edge/` | `eacld-g1`, `eacld-g2`, `eacld-edge-control` |
-| VM-CORE | `core/` | `eacld-core`; motorul Bayesian E0 reutilizat |
+| VM-CORE | `core/` | `eacld-core`; reused E0 Bayesian inference engine |
 
-Directorul fiecărei mașini virtuale corespunde proiectului Docker Compose din `/opt/eacld/<director>/`.
+Each virtual machine has a separate Docker Compose project deployed under `/opt/eacld/<directory>/`.
 
-## Structura de implementare
+## Deployment directory structure
 
 - `control/compose.yaml`, `control/services/control/{Dockerfile,requirements.txt,src/}`
 - `nodes/compose.yaml`, `nodes/services/nodes/{Dockerfile,requirements.txt,src/}`
@@ -24,20 +24,20 @@ Directorul fiecărei mașini virtuale corespunde proiectului Docker Compose din 
 - `edge/compose.yaml`, `edge/services/{g1,g2,edge-control}/{Dockerfile,requirements.txt,src/}`, `edge/config/{mosquitto.conf,acl,passwd}`, `edge/volumes/mosquitto/`
 - `core/compose.yaml`, `core/services/core/{Dockerfile,requirements.txt,src/}`, `core/vendor/e0/{eacld/core.py,config/e0_config.json,results/fitted_model.json}`, `core/secrets/pg_password`, `core/volumes/postgres/`
 
-Lista indică structura prevăzută în specificație; fișierele aplicațiilor și configurațiile operaționale vor fi adăugate pe măsură ce sunt implementate. Directoarele goale sunt marcate cu `.gitkeep`.
+These paths describe the planned deployment structure. Application source files, Docker configurations, and runtime configuration files will be added during implementation. Empty directories are currently represented by `.gitkeep` files.
 
-## Domenii de comunicație
+## Communication networks
 
-- NET-DATA: VMnet2, 10.60.10.0/24
-- NET-PROBE: VMnet3, 10.60.20.0/24
-- NET-CONTROL: VMnet4, 10.60.30.0/24
-- NET-PLANT: VMnet5, 10.60.40.0/24
-- ADMIN: VMnet8, NAT/DHCP
+- NET-DATA: VMnet2, 10.60.10.0/24 — MQTT telemetry through VM-EDGE
+- NET-PROBE: VMnet3, 10.60.20.0/24 — direct active verification and reference requests
+- NET-CONTROL: VMnet4, 10.60.30.0/24 — authorized agent configuration and control
+- NET-PLANT: VMnet5, 10.60.40.0/24 — separate reads of the shared virtual process
+- ADMIN: VMnet8, NAT/DHCP — system administration
 
-## Delimitarea informațiilor
+## Information access boundaries
 
-Datele private ale intervențiilor și cauza reală rămân în VM-CONTROL și nu sunt accesibile VM-CORE. Cheile HMAC ale nodurilor sunt deținute numai de VM-NODES și verificatorul din VM-CORE. `VM-EDGE` nu deține aceste chei.
+Private intervention parameters and ground-truth data remain on VM-CONTROL and are not accessible to VM-CORE. Per-node HMAC keys are held only by VM-NODES and the verifier on VM-CORE. VM-EDGE does not possess those keys.
 
-Artefactul computațional E0 este reutilizat în VM-CORE prin `LiveEnvironment`, fără rescrierea `eacld/core.py`.
+The existing E0 computational artifact is reused on VM-CORE through `LiveEnvironment`; `eacld/core.py` is not rewritten.
 
-**Stadiu:** structura inițială; serviciile nu sunt încă implementate.
+**Current status:** Initial repository structure only. The application services have not yet been implemented.

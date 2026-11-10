@@ -196,7 +196,7 @@ def create_command_server(gateway: Gateway2, path: str = CONTROL_SOCKET):
         def handle(self) -> None:
             try:
                 raw = self.rfile.readline(2049)
-                if not raw or len(raw) > 2048 or not raw.endswith(b"\\n"):
+                if not raw or len(raw) > 2048 or not raw.endswith(b"\n"):
                     raise ValueError("invalid command length")
                 request = json.loads(raw)
                 if not isinstance(request, dict):
@@ -221,7 +221,7 @@ def create_command_server(gateway: Gateway2, path: str = CONTROL_SOCKET):
                     raise ValueError("unsupported command or fields")
             except (ValueError, TypeError, KeyError, json.JSONDecodeError) as error:
                 reply = {"status": "error", "reason": str(error)}
-            self.wfile.write((json.dumps(reply, separators=(",", ":")) + "\\n").encode())
+            self.wfile.write((json.dumps(reply, separators=(",", ":")) + "\n").encode())
 
     class Server(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
         daemon_threads = True

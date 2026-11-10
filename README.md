@@ -40,4 +40,4 @@ Private intervention parameters and ground-truth data remain on VM-CONTROL and a
 
 The existing E0 computational artifact is reused on VM-CORE through `LiveEnvironment`; `eacld/core.py` is not rewritten.
 
-**Current status:** Initial repository structure only. The application services have not yet been implemented.
+**Current status:** Shared communication contracts and the initial VM-CONTROL service implementation are available. Other distributed application services are not yet implemented.

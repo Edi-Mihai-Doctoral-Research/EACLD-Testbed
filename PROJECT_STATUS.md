@@ -4,7 +4,7 @@
 **Repository:** eduardmihailescu-creator/EACLD-Testbed  
 **Visibility:** Private  
 **Working branch:** main  
-**Last completed implementation checkpoint:** Current main HEAD (see Section 5 and Git history)  
+**Last completed implementation commit:** c84fdb02f18b218e7aa68bf733ce11e277cd2420  
 **Current phase:** Development of the distributed testbed services  
 **Next task:** Implement eacld-reference on VM-REFERENCE
 
@@ -88,8 +88,7 @@ Consult the TUIAȘI research project documentation and the Google Drive document
 | 2026-11-10 | Shared binary frame, HMAC, MQTT and interface contracts committed with unit tests | b872cbfd |
 | 2026-11-10 | Initial eacld-control implementation: virtual plant, private orchestrator/injector/store, read-only NET-PLANT API, Docker configuration and tests | 6c45ef95 |
 | 2026-11-10 | Project continuation log added and linked from README | a624ca6e |
-
-| 2026-11-10 | Initial eacld-nodes implementation: shared-process sensor acquisition, signed MQTT telemetry, direct challenge, keyring, Compose and 21 local tests; runtime smoke check | Current implementation commit (main HEAD) |
+| 2026-11-10 | Initial eacld-nodes implementation: shared-process sensor acquisition, signed MQTT telemetry, direct challenge, keyring, Compose and 21 local tests; runtime smoke check | c84fdb02 |
 
 ## 6. How to resume
 

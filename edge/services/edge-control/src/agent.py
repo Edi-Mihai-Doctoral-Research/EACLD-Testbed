@@ -82,7 +82,7 @@ def create_server(*, host: str = CONTROL_HOST, port: int = CONTROL_PORT,
 
         def is_authorized(self, *, health: bool) -> bool:
             source = self.client_address[0]
-            return source == allowed_source or (health and source == "127.0.0.1")
+            return source == allowed_source or (health and source in ("127.0.0.1", CONTROL_HOST))
 
         def do_GET(self) -> None:
             if not self.is_authorized(health=True):

@@ -48,9 +48,32 @@ services:
       EACLD_G2_MQTT_PASSWORD_FILE: /run/eacld/mqtt_password
     volumes:
       - ./secrets/g2_mqtt_password:/run/eacld/mqtt_password:ro
+      - g2-control:/run/eacld/g2
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8300/healthz', timeout=3).close()"]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 10s
+
+  eacld-edge-control:
+    build:
+      context: ..
+      dockerfile: edge/services/edge-control/Dockerfile
+    image: eacld-edge-control:0.1.0
+    container_name: eacld-edge-control
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      - eacld-g2
+    volumes:
+      - g2-control:/run/eacld/g2
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8300/healthz', timeout=3).close()"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  g2-control:

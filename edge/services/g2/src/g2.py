@@ -13,6 +13,7 @@ import logging
 import os
 from pathlib import Path
 import threading
+import socketserver
 
 from eacld_contracts.topics import G1_TRANSIT_SUBSCRIPTION, accepted_topic
 
@@ -22,6 +23,7 @@ HEADER_SIZE = 62
 FRAME_SIZE = 94
 HEALTH_HOST = "127.0.0.1"
 HEALTH_PORT = 8300
+CONTROL_SOCKET = "/run/eacld/g2/control.sock"
 
 
 @dataclass(frozen=True)
@@ -180,6 +182,55 @@ def create_health_server(gateway: Gateway2, *, host: str = HEALTH_HOST,
     return ThreadingHTTPServer((host, port), Handler)
 
 
+
+def create_command_server(gateway: Gateway2, path: str = CONTROL_SOCKET):
+    """Private Unix-socket control channel, shared only with edge-control."""
+    socket_path = Path(path)
+    socket_path.parent.mkdir(parents=True, exist_ok=True)
+    if socket_path.exists():
+        if not socket_path.is_socket():
+            raise RuntimeError("G2 socket path exists but is not a socket")
+        socket_path.unlink()
+
+    class Handler(socketserver.StreamRequestHandler):
+        def handle(self) -> None:
+            try:
+                raw = self.rfile.readline(2049)
+                if not raw or len(raw) > 2048 or not raw.endswith(b"\\n"):
+                    raise ValueError("invalid command length")
+                request = json.loads(raw)
+                if not isinstance(request, dict):
+                    raise ValueError("command must be a JSON object")
+                action = request.get("action")
+                if action == "health" and set(request) == {"action"}:
+                    reply = {"status": "ok" if gateway.ready.is_set() else "unavailable"}
+                elif action == "mutate" and set(request) == {
+                    "action", "node_id", "offset", "xor_mask"
+                }:
+                    gateway.stage_mutation(request["node_id"],
+                                           offset=request["offset"],
+                                           xor_mask=request["xor_mask"])
+                    reply = {"status": "ok"}
+                elif action == "replay" and set(request) == {"action", "node_id"}:
+                    gateway.stage_replay(request["node_id"])
+                    reply = {"status": "ok"}
+                elif action == "clear" and set(request) == {"action", "node_id"}:
+                    gateway.clear_intervention(request["node_id"])
+                    reply = {"status": "ok"}
+                else:
+                    raise ValueError("unsupported command or fields")
+            except (ValueError, TypeError, KeyError, json.JSONDecodeError) as error:
+                reply = {"status": "error", "reason": str(error)}
+            self.wfile.write((json.dumps(reply, separators=(",", ":")) + "\\n").encode())
+
+    class Server(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
+        daemon_threads = True
+
+    server = Server(str(socket_path), Handler)
+    socket_path.chmod(0o660)
+    return server
+
+
 def main() -> None:
     import paho.mqtt.client as mqtt
 
@@ -200,6 +251,10 @@ def main() -> None:
     client.reconnect_delay_set(min_delay=1, max_delay=20)
 
     health_server = create_health_server(gateway)
+    command_server = create_command_server(gateway, os.environ.get("EACLD_G2_CONTROL_SOCKET", CONTROL_SOCKET))
+    command_thread = threading.Thread(target=command_server.serve_forever,
+                                      name="g2-control", daemon=True)
+    command_thread.start()
     thread = threading.Thread(target=health_server.serve_forever,
                               name="g2-health", daemon=True)
     thread.start()
@@ -209,6 +264,9 @@ def main() -> None:
         client.connect_async(host, port, keepalive=30)
         client.loop_forever(retry_first_connection=True)
     finally:
+        command_server.shutdown()
+        command_server.server_close()
+        Path(command_server.server_address).unlink(missing_ok=True)
         health_server.shutdown()
         health_server.server_close()
 

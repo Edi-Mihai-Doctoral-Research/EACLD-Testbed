@@ -32,3 +32,25 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+
+  eacld-g2:
+    build:
+      context: ..
+      dockerfile: edge/services/g2/Dockerfile
+    image: eacld-g2:0.1.0
+    container_name: eacld-g2
+    restart: unless-stopped
+    depends_on:
+      - mosquitto
+    environment:
+      EACLD_MQTT_HOST: mosquitto
+      EACLD_MQTT_PORT: "1883"
+      EACLD_G2_MQTT_PASSWORD_FILE: /run/eacld/mqtt_password
+    volumes:
+      - ./secrets/g2_mqtt_password:/run/eacld/mqtt_password:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8300/healthz', timeout=3).close()"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

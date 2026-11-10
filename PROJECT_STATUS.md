@@ -5,8 +5,8 @@
 **Visibility:** Private  
 **Working branch:** main  
 **Last completed implementation checkpoint:** This commit on main (inspect Git HEAD for its SHA)  
-**Current phase:** Development of the distributed testbed services  
-**Next task:** Implement eacld-edge-control on VM-EDGE
+**Current phase:** All seven initial application service implementations committed; distributed deployment pending  
+**Next task:** No additional service implementation authorized in this run; deployment/integration verification remains pending
 
 This file is the **single authoritative implementation checkpoint** for continuation across collaborators and ChatGPT sessions. README.md is the repository entry point; this document holds the current status and chronological work log. The executable source on main is authoritative for implemented code; the V1 architecture document is authoritative for technical requirements.
 
@@ -23,22 +23,22 @@ This file is the **single authoritative implementation checkpoint** for continua
 | eacld-reference / VM-REFERENCE | reference/services/reference/ | Initial implementation committed | 19 local unit/API tests passed on Python 3.13.5; two HTTP listeners and fresh reference read passed a local smoke test with a stubbed plant |
 | eacld-g1 / VM-EDGE | edge/services/g1/ | Initial implementation committed | 19 local unit/configuration tests passed on Python 3.13.5; MQTT forwarding tested with a fake client; real broker not yet tested |
 | eacld-g2 / VM-EDGE | edge/services/g2/ | Initial implementation committed | 19 local unit/configuration tests passed on Python 3; MQTT tested with a fake client, live broker pending |
-| eacld-edge-control / VM-EDGE | edge/services/edge-control/ | Not implemented | Pending |
-| eacld-core / VM-CORE | core/services/core/ | Not implemented | Pending |
-| Existing E0 Bayesian engine | core/vendor/e0/ | Integration pending | Preserve existing eacld/core.py; integrate through LiveEnvironment |
+| eacld-edge-control / VM-EDGE | edge/services/edge-control/ | Initial implementation committed | 8 unit/API tests committed; local socket + HTTP integration and live-VM operation not independently verified |
+| eacld-core / VM-CORE | core/services/core/ | Initial implementation committed | 9 new tests committed; original E0 core 9/9 tests passed locally; live MQTT/Postgres/VM integration unverified |
+| Existing E0 Bayesian engine | core/vendor/e0/e0_source.zip.b64 | Original E0 source and calibrated model vendored without private data | Original SHA-256 verified from Drive; original E0 core tests 9/9 passed locally |
 | Distributed VM deployment | Five virtual machines | Not verified | Ubuntu 24.04 / Python 3.12 / live Mosquitto and inter-VM tests pending |
 
 Local unit and smoke tests are not evidence of successful distributed deployment.
 
-## 2. Exact continuation point
+## 2. Completion of the two authorized service implementations
 
-**Next component: eacld-edge-control on VM-EDGE.** Follow the existing technical architecture V1. Control and timing remain under VM-CONTROL orchestration. This service has not been implemented.
+**eacld-edge-control / VM-EDGE: initial implementation committed.** The source-restricted HTTP agent listens on 10.60.30.14:8300 (NET-CONTROL) and authorizes only VM-CONTROL at 10.60.30.10 for intervention requests. G2 has a private Unix-domain command socket shared with the agent through a dedicated Docker volume. Explicit mutate, replay and clear commands stage G2 interventions without autonomously selecting experimental scenarios. The G1 application and Mosquitto ACL/host port remain unchanged. Eight local-unit/API tests are committed, but these newly added tests have not been independently run in a live VM-EDGE deployment. The edge-control API contract is an implementation-level extension to the V1 health endpoint.
 
-**Completed G2 implementation:** `edge/services/g2/src/g2.py` uses the distinct `g2` MQTT identity, subscribes only to `transit/g1/+`, and publishes only to `accepted/<node_id>` with QoS 1 and retain disabled. Normal forwarding preserves payload bytes, including invalid frames. One-shot internal `stage_mutation` and `stage_replay` primitives support explicitly staged post-authentication header alteration and replay; no MAC recomputation or node keys are available to G2. Mutation changes one header byte in a 94-byte frame, leaving its 32-byte MAC unchanged. Replay sends a stored prior frame after the next current frame. No public control API or autonomous experiment schedule was added.
+**eacld-core / VM-CORE: initial implementation committed.** Core subscribes only to accepted/+ using the core MQTT principal, parses the original 94-byte frame contract, validates HMAC against VM-CORE-only node keys and persists anti-replay state and received telemetry in internal PostgreSQL 16. The private E0 computational source, fitted model and configuration were selectively copied from the verified Drive archive into a compact reproducible source package without any private ground-truth datasets. E0 eacld/core.py is unmodified and loaded by the container at build time. The LiveEnvironment adapter executes four available physical/security probes and returns only observed results and nominal configured costs. The explicit diagnosis endpoint on VM-CORE NET-CONTROL requires operator-provided mode, episode identifiers, baseline and threshold; no experiment parameters or outcomes are invented.
 
-**VM-EDGE packaging:** `edge/compose.yaml` now includes eacld-g2 with its own Python 3.12 Dockerfile, pinned Paho dependency, private `edge/secrets/g2_mqtt_password` mount and container-local health endpoint. Mosquitto ACL, broker listener, and G1 behavior are unchanged. Only the broker publishes host port `10.60.10.14:1883`. Provision the G2 password privately.
+**Verification boundaries:** Original E0 mathematical core tests were executed locally: 9 passed. New tests for edge-control and core services were added (8 and 9 respectively), along with a GitHub test workflow, but a completed successful Actions run was not available for verification in this session. Real Mosquitto, PostgreSQL, Ubuntu/Docker, five-VM connectivity and complete end-to-end experiments are unverified. No runtime secrets or experimental truth were committed to GitHub.
 
-**Verification:** 19 local G2 unit/configuration tests passed in the implementation environment, covering normal forwarding, controlled mutation, one-shot replay, topic routing, readiness, and restricted exposure. They use a fake MQTT client. No real Mosquitto, Docker deployment, five-VM end-to-end connectivity or external control-agent integration has been verified. The tests do not demonstrate successful distributed deployment.
+**Authorized scope completed:** eacld-edge-control followed by eacld-core. Further deployment and experimental execution remain separate tasks.
 
 ## 3. Implementation and repository decisions
 
@@ -80,7 +80,9 @@ Consult the TUIAȘI research project documentation and the Google Drive document
 | 2026-11-10 | Initial eacld-nodes implementation: shared-process sensor acquisition, signed MQTT telemetry, direct challenge, keyring, Compose and 21 local tests; runtime smoke check | c84fdb02 |
 | 2026-11-10 | Initial eacld-reference implementation: independent NET-PLANT read, NET-PROBE reference API, NET-CONTROL health API, Compose packaging and 19 local tests; two-listener smoke test | 92452898 |
 | 2026-11-10 | VM-EDGE Mosquitto 2.x configuration and initial eacld-g1 byte-preserving MQTT forwarding, internal health and 19 local tests; live-broker integration pending | 18e8101f |
-| 2026-11-10 | Initial eacld-g2 MQTT forwarding, one-shot header mutation/replay primitives, dedicated Compose service and 19 local tests; live-broker and control integration pending | Current main checkpoint |
+| 2026-11-10 | Initial eacld-g2 MQTT forwarding, one-shot header mutation/replay primitives, dedicated Compose service and 19 local tests; live-broker and control integration pending | 72566a55 |
+| 2026-11-10 | VM-EDGE edge-control agent, G2 Unix control channel, 8 tests, Compose and documentation committed; VM integration pending | Current main work sequence |
+| 2026-11-10 | VM-CORE telemetry, replay registry, PostgreSQL, preserved Bayesian E0 vendor artifact, LiveEnvironment, 9 new tests and service Compose committed | This commit on main |
 
 ## 6. How to resume
 

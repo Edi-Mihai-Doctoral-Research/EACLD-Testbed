@@ -4,9 +4,9 @@
 **Repository:** eduardmihailescu-creator/EACLD-Testbed  
 **Visibility:** Private  
 **Working branch:** main  
-**Last completed implementation commit:** 6c45ef95bd2330758b5679a4714991dc8f4895d2  
+**Last completed implementation checkpoint:** Current main HEAD (see Section 5 and Git history)  
 **Current phase:** Development of the distributed testbed services  
-**Next task:** Implement eacld-nodes on VM-NODES
+**Next task:** Implement eacld-reference on VM-REFERENCE
 
 This file is the **single authoritative implementation checkpoint** for continuation across collaborators and ChatGPT sessions. README.md is the repository entry point; this document holds the current status and chronological work log. The executable source on main is authoritative for implemented code; the V1 architecture document is authoritative for technical requirements.
 
@@ -19,41 +19,35 @@ This file is the **single authoritative implementation checkpoint** for continua
 | MQTT topics and principal permissions | shared/eacld_contracts/topics.py | Implemented | Included in shared-contract tests |
 | HTTP and LiveEnvironment interface definitions | shared/eacld_contracts/interfaces.py | Defined | Included in shared-contract tests |
 | eacld-control / VM-CONTROL | control/services/control/ | Initial implementation committed | 12 local unit tests reported passing |
-| eacld-nodes / VM-NODES | nodes/services/nodes/ | Not implemented | Pending |
+| eacld-nodes / VM-NODES | nodes/services/nodes/ | Initial implementation committed | 21 unit/API tests passed locally on Python 3.13.5; two-listener smoke test passed; MQTT broker mocked, distributed integration pending |
 | eacld-reference / VM-REFERENCE | reference/services/reference/ | Not implemented | Pending |
 | eacld-g1 / VM-EDGE | edge/services/g1/ | Not implemented | Pending |
 | eacld-g2 / VM-EDGE | edge/services/g2/ | Not implemented | Pending |
 | eacld-edge-control / VM-EDGE | edge/services/edge-control/ | Not implemented | Pending |
 | eacld-core / VM-CORE | core/services/core/ | Not implemented | Pending |
 | Existing E0 Bayesian engine | core/vendor/e0/ | Integration pending | Preserve existing eacld/core.py; integrate via LiveEnvironment |
-| Distributed deployment | Five virtual machines | Not yet verified | VM setup and end-to-end tests pending |
+| Distributed deployment | Five virtual machines | Not yet verified | VM setup and end-to-end tests## 2. Exact continuation point
 
-The unit-test counts above refer to the completed local implementation sessions. They are not evidence of distributed deployment or acceptance testing.
+**Next component: eacld-reference (VM-REFERENCE).** Develop this independent acquisition service in English, adhering to the architecture V1 implementation contracts and existing repository conventions.
 
-## 2. Exact continuation point
+Required source structure:
 
-**Next component: eacld-nodes (VM-NODES).** Develop it in English, using the established shared contracts, without changing the approved architecture.
+- `reference/services/reference/src/reference.py` — independent observation and HTTP service.
+- `reference/services/reference/Dockerfile`, `requirements.txt`, `reference/compose.yaml` — container packaging and deployment.
+- Tests and English documentation for the reference read path and restricted control-agent health.
 
-Required component names and source layout from architecture V1:
+Specified interfaces and information boundaries:
 
-- nodes/services/nodes/src/nodes.py — virtual-node service and MQTT telemetry publication
-- nodes/services/nodes/src/sensor.py — readings from the common virtual process and node-side measurement behavior
-- nodes/services/nodes/src/frame.py — integration of the shared 94-byte frame/HMAC contract (do not introduce a divergent wire format)
-- nodes/services/nodes/src/challenge.py — direct node-challenge handling
-- nodes/services/nodes/Dockerfile and requirements.txt
-- nodes/compose.yaml and relevant tests
+- Read the **same** public process maintained by VM-CONTROL at `10.60.40.10:8100/v1/state` via NET-PLANT, independently of VM-NODES.
+- Expose `POST /v1/reference/read` on `10.60.20.13:8201` via NET-PROBE for VM-CORE active checks. The V1 response fields are `temperature_mC`, `status`, and `timestamp`; avoid inventing research-specific failure semantics.
+- Expose the specified control-agent `GET /healthz` on `10.60.30.13:8300` via NET-CONTROL, limiting its caller to VM-CONTROL at `10.60.30.10`.
+- Keep services bound to the research-network interfaces, not VMnet8 ADMIN. VM-REFERENCE has no NET-DATA interface, no MQTT gateway role and no node HMAC keys.
+- Do not expose private cause labels, intervention metadata, or experimental ground truth. VM-REFERENCE and VM-NODES must remain separate observation paths of the **same** virtual process.
+- Verify unit/API behavior locally before committing and retain distributed/VM tests as pending until the infrastructure is available.
 
-Specified interfaces and data paths:
+**Completed VM-NODES implementation notes:** The service includes `src/nodes.py`, `sensor.py`, `frame.py`, and `challenge.py`; the shared 94-byte HMAC frame; node-private keyring and MQTT credential files; a read-only NET-PLANT process client; `raw/<node_id>` MQTT publication; direct type-2 challenge responses; and NET-CONTROL health-only access. The example node IDs, default 1000 ms sampling period, bias values and QoS 1 choice are **implementation defaults**, not approved experimental parameters. The experiment protocol will determine actual population, values, scheduling and test outcomes. Dynamic agent configuration beyond V1's health endpoint has not been implemented.
 
-- Read-only shared process: GET http://10.60.40.10:8100/v1/state on NET-PLANT (VMnet5).
-- MQTT telemetry: publish raw/<node_id> to VM-EDGE broker at 10.60.10.14:1883 on NET-DATA (VMnet2).
-- Active verification: POST http://10.60.20.12:8202/v1/challenge on NET-PROBE (VMnet3); request fields nonce_hex and node_id; response frame_hex encoding a 94-byte type-2 frame with verifiable HMAC-SHA256.
-- Agent control network: VM-NODES 10.60.30.12 on NET-CONTROL (VMnet4), with the specified control API on port 8300.
-- The virtual machine has four research interface addresses: 10.60.10.12, 10.60.20.12, 10.60.30.12, and 10.60.40.12, plus separate VMnet8 administration.
-- Use the shared frame implementation: 62-byte big-endian authenticated header + 32-byte MAC; signed temperature_mC, unsigned humidity_mPct, boot_id, sequence_no, uptime_ms, nonce, and key_version.
-- Per-node HMAC keys must not be accessible by VM-EDGE. Only VM-NODES and the verifier on VM-CORE possess them.
-- The distributed testbed must not disclose private intervention labels or ground truth to VM-CORE.
-- Validate the component locally before committing; integration testing follows when the virtual machines are provisioned.
+re provisioned.
 
 Keep experiment procedures and statistical evaluation in the separate experimental protocol rather than inventing them in this implementation log.
 
@@ -67,7 +61,7 @@ Keep experiment procedures and statistical evaluation in the separate experiment
 6. Telemetry runs through VM-NODES → VM-EDGE G1 → VM-EDGE G2 → VM-CORE. Active checks travel directly from VM-CORE to VM-NODES or VM-REFERENCE over NET-PROBE, bypassing the telemetry gateway.
 7. The existing E0 Bayesian computational core is reused, not rewritten. VM-CORE integrates it through LiveEnvironment.
 8. The V1 technical specification is maintained in Romanian on TUIAȘI Google Drive for the infrastructure implementer; this repository is in English.
-9. Secrets, passwords, per-node HMAC keys, runtime databases, and private ground-truth artifacts are not committed to GitHub.
+9. Secrets, passwords, per-node HMAC keys, runtime databases, and private ground-truth artifacts are not committed to GitHub. The root .dockerignore also excludes local secrets and runtime files from Docker build contexts.
 
 **Division of work:** Mihai prepares the five VMs, networking, and base software. Repository development covers EACLD application services, integrations, configurations, and automated tests. Deployment on the prepared VMs and end-to-end verification are joint integration activities.
 
@@ -93,7 +87,9 @@ Consult the TUIAȘI research project documentation and the Google Drive document
 | 2026-11-10 | README converted to English | cfd8f38f |
 | 2026-11-10 | Shared binary frame, HMAC, MQTT and interface contracts committed with unit tests | b872cbfd |
 | 2026-11-10 | Initial eacld-control implementation: virtual plant, private orchestrator/injector/store, read-only NET-PLANT API, Docker configuration and tests | 6c45ef95 |
-| 2026-11-10 | Project continuation log added and linked from README | Current documentation commit |
+| 2026-11-10 | Project continuation log added and linked from README | a624ca6e |
+
+| 2026-11-10 | Initial eacld-nodes implementation: shared-process sensor acquisition, signed MQTT telemetry, direct challenge, keyring, Compose and 21 local tests; runtime smoke check | Current implementation commit (main HEAD) |
 
 ## 6. How to resume
 

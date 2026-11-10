@@ -26,3 +26,8 @@ venv/
 # Local artifacts
 .DS_Store
 *.log
+
+# VM-NODES private configuration and authentication material
+nodes/config/nodes.json
+nodes/secrets/**
+!nodes/secrets/.gitkeep

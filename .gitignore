@@ -1,0 +1,28 @@
+# Runtime storage and private experiment state
+**/volumes/**
+!**/volumes/**/
+!**/volumes/**/.gitkeep
+
+# Authentication material and credentials
+edge/config/passwd
+core/secrets/**
+!core/secrets/.gitkeep
+**/.env
+**/.env.*
+!**/.env.example
+*.key
+*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+*.egg-info/
+
+# Local artifacts
+.DS_Store
+*.log

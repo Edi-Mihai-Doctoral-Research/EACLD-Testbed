@@ -6,7 +6,7 @@
 **Working branch:** main  
 **Last completed implementation checkpoint:** This commit on main (inspect Git HEAD for its SHA)  
 **Current phase:** Development of the distributed testbed services  
-**Next task:** Implement eacld-g2 on VM-EDGE
+**Next task:** Implement eacld-edge-control on VM-EDGE
 
 This file is the **single authoritative implementation checkpoint** for continuation across collaborators and ChatGPT sessions. README.md is the repository entry point; this document holds the current status and chronological work log. The executable source on main is authoritative for implemented code; the V1 architecture document is authoritative for technical requirements.
 
@@ -22,7 +22,7 @@ This file is the **single authoritative implementation checkpoint** for continua
 | eacld-nodes / VM-NODES | nodes/services/nodes/ | Initial implementation committed | 21 local unit/API tests passed; MQTT broker mocked |
 | eacld-reference / VM-REFERENCE | reference/services/reference/ | Initial implementation committed | 19 local unit/API tests passed on Python 3.13.5; two HTTP listeners and fresh reference read passed a local smoke test with a stubbed plant |
 | eacld-g1 / VM-EDGE | edge/services/g1/ | Initial implementation committed | 19 local unit/configuration tests passed on Python 3.13.5; MQTT forwarding tested with a fake client; real broker not yet tested |
-| eacld-g2 / VM-EDGE | edge/services/g2/ | Not implemented | Pending |
+| eacld-g2 / VM-EDGE | edge/services/g2/ | Initial implementation committed | 19 local unit/configuration tests passed on Python 3; MQTT tested with a fake client, live broker pending |
 | eacld-edge-control / VM-EDGE | edge/services/edge-control/ | Not implemented | Pending |
 | eacld-core / VM-CORE | core/services/core/ | Not implemented | Pending |
 | Existing E0 Bayesian engine | core/vendor/e0/ | Integration pending | Preserve existing eacld/core.py; integrate through LiveEnvironment |
@@ -32,16 +32,13 @@ Local unit and smoke tests are not evidence of successful distributed deployment
 
 ## 2. Exact continuation point
 
-**Next component: eacld-g2 on VM-EDGE.** Develop the second gateway stage in English and use the existing broker, ACL, Docker Compose configuration, and shared EACLD contracts. Follow architecture V1.
+**Next component: eacld-edge-control on VM-EDGE.** Follow the existing technical architecture V1. Control and timing remain under VM-CONTROL orchestration. This service has not been implemented.
 
-- Implement `edge/services/g2/src/` with its own Dockerfile, dependencies and tests; extend `edge/compose.yaml` without changing the Mosquitto broker and G1 behavior already implemented.
-- Subscribe only to `transit/g1/+` and publish on `accepted/<node_id>` using the distinct `g2` MQTT principal. VM-CORE subsequently subscribes only to `accepted/+`.
-- Allow controlled **post-authentication payload modification and replay** according to the experimental control protocol, without access to per-node HMAC keys or recomputation of the MAC. Preserve normal forwarding when no intervention is active.
-- Keep experimental activation and timing under VM-CONTROL orchestration through the separate `eacld-edge-control` service, which remains a future component. Do not silently invent experimental fault scenarios or measurement outcomes.
-- Keep G2 internal to VM-EDGE's Docker network. No new host-published application port on ADMIN or NET-DATA is required for the forwarding service. Any subsequent NET-CONTROL agent endpoint belongs to eacld-edge-control.
-- Develop unit tests for byte-preserving normal forwarding, controlled mutation and replay boundaries, MQTT topic permissions, and absence of HMAC keys. Mark actual Mosquitto/VM integration tests as pending until deployed.
+**Completed G2 implementation:** `edge/services/g2/src/g2.py` uses the distinct `g2` MQTT identity, subscribes only to `transit/g1/+`, and publishes only to `accepted/<node_id>` with QoS 1 and retain disabled. Normal forwarding preserves payload bytes, including invalid frames. One-shot internal `stage_mutation` and `stage_replay` primitives support explicitly staged post-authentication header alteration and replay; no MAC recomputation or node keys are available to G2. Mutation changes one header byte in a 94-byte frame, leaving its 32-byte MAC unchanged. Replay sends a stored prior frame after the next current frame. No public control API or autonomous experiment schedule was added.
 
-**Completed VM-EDGE G1 and broker configuration:** `edge/config/mosquitto.conf` and `edge/config/acl` follow V1; authentication is required and the broker is limited to `10.60.10.14:1883` on NET-DATA. The four principals are node, g1, g2 and core with distinct topic permissions. The password database `edge/config/passwd` and `edge/secrets/g1_mqtt_password` must be provisioned privately on VM-EDGE and are ignored by Git. `edge/services/g1/src/g1.py` subscribes to `raw/+` and republishes unchanged bytes to `transit/g1/<node_id>`, including malformed HMAC payloads, without deduplication or cryptographic processing. G1 has only a container-local health endpoint at `127.0.0.1:8300`; the VM-EDGE NET-CONTROL endpoint at `10.60.30.14:8300` is reserved for eacld-edge-control. Verification: 19 local Python 3.13.5 unit/configuration tests and YAML syntax/port mapping checks passed. A live Mosquitto broker was not available for local testing; Docker/Ubuntu and five-VM integration remain unverified.
+**VM-EDGE packaging:** `edge/compose.yaml` now includes eacld-g2 with its own Python 3.12 Dockerfile, pinned Paho dependency, private `edge/secrets/g2_mqtt_password` mount and container-local health endpoint. Mosquitto ACL, broker listener, and G1 behavior are unchanged. Only the broker publishes host port `10.60.10.14:1883`. Provision the G2 password privately.
+
+**Verification:** 19 local G2 unit/configuration tests passed in the implementation environment, covering normal forwarding, controlled mutation, one-shot replay, topic routing, readiness, and restricted exposure. They use a fake MQTT client. No real Mosquitto, Docker deployment, five-VM end-to-end connectivity or external control-agent integration has been verified. The tests do not demonstrate successful distributed deployment.
 
 ## 3. Implementation and repository decisions
 
@@ -82,7 +79,8 @@ Consult the TUIAȘI research project documentation and the Google Drive document
 | 2026-11-10 | Project continuation log added and linked from README | a624ca6e |
 | 2026-11-10 | Initial eacld-nodes implementation: shared-process sensor acquisition, signed MQTT telemetry, direct challenge, keyring, Compose and 21 local tests; runtime smoke check | c84fdb02 |
 | 2026-11-10 | Initial eacld-reference implementation: independent NET-PLANT read, NET-PROBE reference API, NET-CONTROL health API, Compose packaging and 19 local tests; two-listener smoke test | 92452898 |
-| 2026-11-10 | VM-EDGE Mosquitto 2.x configuration and initial eacld-g1 byte-preserving MQTT forwarding, internal health and 19 local tests; live-broker integration pending | This commit on main |
+| 2026-11-10 | VM-EDGE Mosquitto 2.x configuration and initial eacld-g1 byte-preserving MQTT forwarding, internal health and 19 local tests; live-broker integration pending | 18e8101f |
+| 2026-11-10 | Initial eacld-g2 MQTT forwarding, one-shot header mutation/replay primitives, dedicated Compose service and 19 local tests; live-broker and control integration pending | Current main checkpoint |
 
 ## 6. How to resume
 

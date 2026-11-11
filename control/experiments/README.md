@@ -319,3 +319,18 @@ and `h4_run.py`. They use the common VM-CORE observation endpoints,
 operator-only control routes, stable telemetry IDs and separate
 VM-CONTROL ground-truth artifacts. Each experiment can be executed as an
 independent, uniquely identified episode.
+
+## H1–H4 consolidated local verification
+
+The operator CLI schemas and test-injection interfaces are checked together
+by `control/tests/test_experiment_compatibility.py`. The consolidated
+runner executes the focused operator, VM-NODES, G2 and VM-CORE regression
+suites, stopping at the first failed group:
+
+```bash
+bash control/experiments/verify_h1_h4.sh
+```
+
+Run the verification script from a checkout with the service-level Python
+dependencies installed. It covers local contracts; distributed execution is
+performed separately through the four operator commands above.

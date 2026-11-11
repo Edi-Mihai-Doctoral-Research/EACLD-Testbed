@@ -36,6 +36,7 @@ class Mutation:
 @dataclass(frozen=True)
 class Replay:
     payload: bytes
+    require_target_telemetry: bool = False
 
 
 def route_transit_topic(topic: str) -> tuple[int, str]:
@@ -109,10 +110,14 @@ class Gateway2:
             previous = self._last_forwarded.get(node_id) if chosen is None else chosen
             if previous is None or previous not in self._recent_forwarded.get(node_id, ()):
                 raise ValueError("selected frame is absent from recent G2 forwarding history")
-            if (len(previous) != FRAME_SIZE or previous[1] != 1
-                    or int.from_bytes(previous[2:4], "big") != node_id):
+            if (chosen is not None and (
+                len(previous) != FRAME_SIZE or previous[1] != 1
+                or int.from_bytes(previous[2:4], "big") != node_id
+            )):
                 raise ValueError("selected frame is not target-node telemetry")
-            self._pending[node_id] = Replay(previous)
+            self._pending[node_id] = Replay(
+                previous, require_target_telemetry=chosen is not None
+            )
 
     def clear_intervention(self, node_id: int) -> None:
         _check_node_id(node_id)
@@ -210,8 +215,10 @@ class Gateway2:
                 }
                 self._pending.pop(node_id, None)
             elif isinstance(action, Replay):
-                if (len(payload) != FRAME_SIZE or payload[1] != 1
-                        or int.from_bytes(payload[2:4], "big") != node_id):
+                if (action.require_target_telemetry and (
+                    len(payload) != FRAME_SIZE or payload[1] != 1
+                    or int.from_bytes(payload[2:4], "big") != node_id
+                )):
                     LOGGER.warning("G2 deferred replay: trigger is not target telemetry")
                     return
                 result = client.publish(target, action.payload, qos=1, retain=False)

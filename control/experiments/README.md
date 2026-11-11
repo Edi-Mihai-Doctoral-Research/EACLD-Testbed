@@ -166,3 +166,78 @@ The runner uses the active node's current configuration rather than the
 example population in `nodes/config/nodes.example.json`. The numeric values
 above illustrate a reproducible H2 episode; experimental parameter selection
 remains part of the research design.
+
+
+## H3 — controlled G2 header mutation
+
+H3 alters exactly one authenticated header byte after VM-NODES has signed the
+message. G2 keeps the original HMAC bytes, so VM-CORE should record
+`mac_status=invalid`. VM-CONTROL preserves the before/after frame evidence.
+
+Run on VM-CONTROL from the full repository checkout:
+
+```bash
+cd /opt/eacld/control
+python3 experiments/h3_run.py \
+  --episode-id H3-001 \
+  --block-id B01 \
+  --node-id 1 \
+  --mode nominal \
+  --baseline-temperature-mc 22000 \
+  --high-delta-mc 3000 \
+  --humidity-mpct 50000 \
+  --offset 40 \
+  --xor-mask 37 \
+  --timeout-seconds 120
+```
+
+These illustrative values change the 32-bit big-endian temperature field
+from 22000 mC to 28912 mC. The frame header is 62 bytes long; its signed
+temperature occupies byte offsets **38–41** (zero-based). The mutation
+affects one of those four bytes only. The last 32 bytes (HMAC-SHA256) remain
+unchanged.
+
+Execution sequence:
+
+1. Confirm VM-CONTROL reachability of agents, VM-CORE readiness and zero
+   sensor bias for the selected node.
+2. Confirm that G2 has no pending action for that node, and snapshot its
+   previous mutation-event counter.
+3. Reset the shared process and wait for a fresh authenticated baseline
+   message in VM-CORE.
+4. Send the one-shot `mutate` intervention to VM-EDGE; poll its restricted
+   status endpoint for the *new* mutation event.
+5. Verify the original 94-byte frame, the single-byte XOR, the unchanged
+   32-byte HMAC and the expected mutated temperature from G2 evidence.
+6. Locate the exact mutated frame in VM-CORE's persisted telemetry by node,
+   bytes and minimum received-record ID, rather than relying on the newest
+   message. Require `mac_status=invalid` and `sequence_status=unavailable`.
+7. Invoke `POST /v1/diagnose` with `selected_telemetry_id`; retrieve the
+   persisted record and confirm that EACLD used this particular frame.
+8. Verify the common simulated process stayed at baseline. Preserve private
+   intervention details on VM-CONTROL only and clear the G2 intervention,
+   including after failures.
+
+The output folder is `~/eacld-experiments/H3-001/` on VM-CONTROL.
+Key files are `parameters.json`, `baseline_telemetry.json`,
+`edge_initial_status.json`, `edge_mutation_evidence.json` (before/after
+signed frames), `core_mutated_telemetry.json`,
+`diagnosis_response.json`, `core_diagnosis_record.json`,
+`private_ground_truth.json`, `edge_cleanup.json` and `manifest.json`.
+Failures leave `failure.json` and the evidence already collected.
+Use a distinct episode identifier for each repetition.
+
+Focused local unit tests:
+
+```bash
+python3 -m unittest discover -s control/tests -p test_h3_run.py -v
+PYTHONPATH=edge/services/g2:shared python3 -m unittest \
+  discover -s edge/tests -p test_h3_mutation_evidence.py -v
+```
+
+VM-CORE tests, in its configured test environment:
+
+```bash
+PYTHONPATH=core/services/core:core/vendor/e0:shared python3 -m unittest \
+  discover -s core/tests -p test_h3_core_selection.py -v
+```

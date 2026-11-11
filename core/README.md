@@ -27,7 +27,12 @@ Example JSON body (illustrative values, not experimental parameters):
       "high_delta_mC": 3000
     }
 
-The operating mode (nominal or degraded) and temperature baseline/threshold must be provided explicitly. The latest accepted telemetry for the node is fixed for the diagnosis, and the E0 engine chooses verification actions under its established finite-horizon policy. The response and persisted diagnosis contain only observable results, posterior probabilities, selected checks, costs, latency and risk. The request never accepts a cause label or private ground truth.
+The operating mode (nominal or degraded) and temperature baseline/threshold must be provided explicitly. By default the most recent accepted telemetry is used. An optional
+`expected_telemetry_id` protects H1/H2 against a changed latest message
+(HTTP 409). For H3, optional `selected_telemetry_id` selects an exact
+previously persisted message even if later telemetry has arrived.
+These two optional fields are mutually exclusive.
+The E0 engine chooses verification actions under its established finite-horizon policy. The response and persisted diagnosis contain only observable results, posterior probabilities, selected checks, costs, latency and risk. The request never accepts a cause label or private ground truth.
 
 MQTT receipt does not automatically open a new experiment episode. VM-CONTROL decides when to invoke the diagnostic run.
 
@@ -51,3 +56,31 @@ VM-CORE has NET-DATA 10.60.10.15, NET-PROBE 10.60.20.15 and NET-CONTROL 10.60.30
 core/tests/test_core_service.py contains unit and API tests for HMAC, keyring, topic validation, direct probes, nonce validation, E0 inference integration, MQTT callback handling and source-restricted control. The original nine E0 mathematical core tests are also retained. The main-branch GitHub workflow contains both suites.
 
 These tests do not establish deployment against live Mosquitto, PostgreSQL, Docker or the five-VM topology.
+
+
+## Operator evidence API (H1–H3)
+
+VM-CONTROL (10.60.30.10) alone may access the following NET-CONTROL
+routes. No additional ports or information channels are introduced.
+
+- `GET /v1/telemetry/latest?node_id=1`: the newest accepted frame for
+  that node, including its stable database ID, observable decoded values,
+  raw frame hexadecimal bytes, HMAC status and freshness classification.
+- `GET /v1/telemetry/match?node_id=1&after_id=<id>&frame_hex=<188-lowercase-hex>`:
+  the earliest exact 94-byte match after a pre-intervention telemetry
+  watermark. This avoids losing the single mutated H3 frame when a newer
+  normal frame is received.
+- `POST /v1/diagnose`: original six research fields plus either
+  `expected_telemetry_id` (latest-record guard) or
+  `selected_telemetry_id` (exact persisted record), never both.
+- `GET /v1/diagnosis?episode_id=...`: the persisted diagnosis with
+  the exact frame and observations used by the original E0 engine.
+
+H3 expects an invalid HMAC and unavailable sequence classification for
+the modified frame. PostgreSQL retains such received frames, but an
+invalid frame cannot advance the authenticated sequence watermark. The
+private mutation action and original pre-mutation frame are recorded
+by VM-CONTROL from G2, not inferred inside VM-CORE.
+
+Focused tests are in `core/tests/test_operator_api.py` and
+`core/tests/test_h3_core_selection.py`.

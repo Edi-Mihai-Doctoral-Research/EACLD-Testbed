@@ -6,7 +6,7 @@
 **Working branch:** main  
 **Last completed implementation checkpoint:** This commit on main (inspect Git HEAD for its SHA)  
 **Current phase:** All seven initial application service implementations committed; distributed deployment pending  
-**Next task:** No additional service implementation authorized in this run; deployment/integration verification remains pending
+**Next task:** Deploy the services on five VMs and verify end-to-end integration
 
 This file is the **single authoritative implementation checkpoint** for continuation across collaborators and ChatGPT sessions. README.md is the repository entry point; this document holds the current status and chronological work log. The executable source on main is authoritative for implemented code; the V1 architecture document is authoritative for technical requirements.
 
@@ -28,17 +28,15 @@ This file is the **single authoritative implementation checkpoint** for continua
 | Existing E0 Bayesian engine | core/vendor/e0/e0_source.zip.b64 | Original E0 source and calibrated model vendored without private data | Original SHA-256 verified from Drive; original E0 core tests 9/9 passed locally |
 | Distributed VM deployment | Five virtual machines | Not verified | Ubuntu 24.04 / Python 3.12 / live Mosquitto and inter-VM tests pending |
 
-Local unit and smoke tests are not evidence of successful distributed deployment.
 
 ## 2. Completion of the two authorized service implementations
 
-**eacld-edge-control / VM-EDGE: initial implementation committed.** The source-restricted HTTP agent listens on 10.60.30.14:8300 (NET-CONTROL) and authorizes only VM-CONTROL at 10.60.30.10 for intervention requests. G2 has a private Unix-domain command socket shared with the agent through a dedicated Docker volume. Explicit mutate, replay and clear commands stage G2 interventions without autonomously selecting experimental scenarios. The G1 application and Mosquitto ACL/host port remain unchanged. Eight local-unit/API tests are committed, but these newly added tests have not been independently run in a live VM-EDGE deployment. The edge-control API contract is an implementation-level extension to the V1 health endpoint.
+**eacld-edge-control / VM-EDGE: initial implementation committed.** The source-restricted HTTP agent listens on 10.60.30.14:8300 (NET-CONTROL) and authorizes only VM-CONTROL at 10.60.30.10 for intervention requests. G2 has a private Unix-domain command socket shared with the agent through a dedicated Docker volume. Explicit mutate, replay and clear commands stage G2 interventions without autonomously selecting experimental scenarios. The G1 application and Mosquitto ACL/host port remain unchanged. Eight local unit/API tests are committed. Live VM-EDGE integration testing is pending. The edge-control API contract is an implementation-level extension to the V1 health endpoint.
 
-**eacld-core / VM-CORE: initial implementation committed.** Core subscribes only to accepted/+ using the core MQTT principal, parses the original 94-byte frame contract, validates HMAC against VM-CORE-only node keys and persists anti-replay state and received telemetry in internal PostgreSQL 16. The private E0 computational source, fitted model and configuration were selectively copied from the verified Drive archive into a compact reproducible source package without any private ground-truth datasets. E0 eacld/core.py is unmodified and loaded by the container at build time. The LiveEnvironment adapter executes four available physical/security probes and returns only observed results and nominal configured costs. The explicit diagnosis endpoint on VM-CORE NET-CONTROL requires operator-provided mode, episode identifiers, baseline and threshold; no experiment parameters or outcomes are invented.
+**eacld-core / VM-CORE: initial implementation committed.** Core subscribes only to accepted/+ using the core MQTT principal, parses the original 94-byte frame contract, validates HMAC against VM-CORE-only node keys and persists anti-replay state and received telemetry in internal PostgreSQL 16. The private E0 computational source, fitted model and configuration were selectively copied from the verified Drive archive into a compact reproducible source package without any private ground-truth datasets. E0 eacld/core.py is unmodified and loaded by the container at build time. The LiveEnvironment adapter executes four available physical/security probes and returns only observed results and nominal configured costs. The explicit diagnosis endpoint on VM-CORE NET-CONTROL requires operator-provided mode, episode identifiers, baseline and threshold.
 
-**Verification boundaries:** Original E0 mathematical core tests were executed locally: 9 passed. New tests for edge-control and core services were added (8 and 9 respectively), along with a GitHub test workflow, but a completed successful Actions run was not available for verification in this session. Real Mosquitto, PostgreSQL, Ubuntu/Docker, five-VM connectivity and complete end-to-end experiments are unverified. No runtime secrets or experimental truth were committed to GitHub.
+**Verification status:** Original E0 mathematical core tests: 9 passed locally. New tests for edge-control and core services: 8 and 9 committed, respectively, alongside a GitHub test workflow. GitHub Actions success: not confirmed. Integration testing pending: live Mosquitto, PostgreSQL, Ubuntu/Docker, five-VM connectivity and end-to-end execution. Runtime secrets and private experimental labels are excluded from GitHub.
 
-**Authorized scope completed:** eacld-edge-control followed by eacld-core. Further deployment and experimental execution remain separate tasks.
 
 ## 3. Implementation and repository decisions
 
@@ -59,11 +57,11 @@ Local unit and smoke tests are not evidence of successful distributed deployment
 **Technical architecture (implementation authority):**  
 TUIAȘI Google Drive → PhD TUIASI → 2 Direcții de cercetare → 04 EACLD – diagnostic cauzal → 02 Testbed experimental → "EACLD - Arhitectura si implementarea testbedului experimental - V1.docx".
 
-**Publication supplement (related, not the implementation source of truth):**  
+**Publication supplement:**  
 TUIAȘI Google Drive → PhD TUIASI → 3 Activitatea de publicare → 04 Activitate publicare 2026-2027 (Anul V) → 004 MDPI Information = ÎN LUCRU → 01 Manuscris → "EACLD - Supplementary Material S2 - MDPI Information - V7.docx".
 
 **Research continuity and collaboration protocol:**  
-Consult the TUIAȘI research project documentation and the Google Drive document "README - MDPI Information - Orientare și continuitate". Preserve architecture and scope; distinguish implemented, proposed, and verified work without inventing results. Do not change existing document formatting or technical requirements without an explicit decision.
+Consult the TUIAȘI research project documentation and the Google Drive document "README - MDPI Information - Orientare și continuitate". Follow the approved architecture and document formatting. Record implementation, proposals and verification results distinctly.
 
 **Existing E0 computational artifact:**  
 "EACLD_E0_Experiment_2026_11_04.zip"; its existing eacld/core.py is to be incorporated into VM-CORE under core/vendor/e0 when the integration phase begins.
@@ -89,6 +87,5 @@ Consult the TUIAȘI research project documentation and the Google Drive document
 1. Open this repository and read README.md, then this PROJECT_STATUS.md.
 2. Read the current architecture V1 from the TUIAȘI research directory before modifying implementation contracts.
 3. Inspect main and the latest implemented component; use the exact continuation point in Section 2.
-4. When new work is completed, update Sections 1, 2, and 5 in the **same commit** as the implementation whenever possible. Record tested scope and its limitations accurately.
+4. When new work is completed, update Sections 1, 2, and 5 in the **same commit** as the implementation whenever possible. Record implemented components and test results.
 
-This document is a **live checkpoint**, not an automatically generated claim of implementation completeness.

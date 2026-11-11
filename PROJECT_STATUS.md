@@ -91,6 +91,21 @@ Consult the TUIAȘI research project documentation and the Google Drive document
 | 2026-11-11 | Disabled automatic GitHub Actions push triggers; retained manual execution only | 19dd01f7 |
 | 2026-11-11 | Transferred both repositories to Edi-Mihai-Doctoral-Research and restored GitHub connector access | Organization transfer |
 | 2026-11-11 | Sent Mihai the EACLD-Testbed handoff and technical-documentation folder; requested hardware availability for 10 days | Coordination by email |
+| 2026-11-11 | Began runnable H1 experiment automation, guarded VM-CORE telemetry capture and local tests on a separate branch; live VM run pending | feature/h1-experiment-runner |
+
+## H1 experiment runner under review
+
+Branch `feature/h1-experiment-runner` introduces an operator-side H1 runner,
+restricted VM-CORE observable telemetry/diagnosis lookups, optional exact
+telemetry-ID pinning during B6 inference, and local tests. It preserves the
+five-VM layout, original E0 Bayesian engine, private control/ground-truth
+boundary, and existing experimental configuration interfaces.
+
+**Evidence status:** operator sequencing and frame-decoding unit tests were
+exercised locally with mocked services; no live distributed deployment was
+performed. The core HTTP integration test is committed but remains to be
+executed in the full project environment. The existing CI E0 import failure
+remains unresolved. No H1 scientific result is claimed from this branch.
 
 ## 6. How to resume
 

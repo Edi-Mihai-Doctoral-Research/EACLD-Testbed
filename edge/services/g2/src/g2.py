@@ -218,8 +218,11 @@ class Gateway2:
                 if (action.require_target_telemetry and (
                     len(payload) != FRAME_SIZE or payload[1] != 1
                     or int.from_bytes(payload[2:4], "big") != node_id
+                    or payload[6:22] != action.payload[6:22]
+                    or int.from_bytes(payload[22:30], "big")
+                    <= int.from_bytes(action.payload[22:30], "big")
                 )):
-                    LOGGER.warning("G2 deferred replay: trigger is not target telemetry")
+                    LOGGER.warning("G2 deferred replay: no newer target-node telemetry")
                     return
                 result = client.publish(target, action.payload, qos=1, retain=False)
                 if result.rc == 0:

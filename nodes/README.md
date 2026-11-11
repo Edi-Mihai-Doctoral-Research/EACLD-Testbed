@@ -1,6 +1,6 @@
 # VM-NODES — eacld-nodes
 
-This service implements the EACLD virtual sensor population, authenticated MQTT telemetry, direct active node challenges, and the NET-CONTROL health endpoint specified in architecture V1 (Tables 6–9).
+This service implements the EACLD virtual sensor population, authenticated MQTT telemetry, direct active node challenges, and the restricted NET-CONTROL health and H2 sensor-bias operations.
 
 ## Network interfaces
 
@@ -9,13 +9,13 @@ This service implements the EACLD virtual sensor population, authenticated MQTT 
 | Shared virtual-process reading | NET-PLANT | GET http://10.60.40.10:8100/v1/state |
 | Raw telemetry publication | NET-DATA | MQTT 10.60.10.14:1883, raw/<node_id> |
 | Direct node challenge | NET-PROBE | POST http://10.60.20.12:8202/v1/challenge |
-| Restricted agent health | NET-CONTROL | GET http://10.60.30.12:8300/healthz |
+| Restricted control agent | NET-CONTROL | GET http://10.60.30.12:8300/healthz; GET/POST /v1/nodes/bias |
 
 VM-NODES has static interfaces at 10.60.10.12, 10.60.20.12, 10.60.30.12 and 10.60.40.12. System administration is separate on VMnet8. The Compose configuration publishes only the NET-PROBE and NET-CONTROL listeners on their respective research-network IPs; it does not publish ports on VMnet8.
 
 ## Runtime and source layout
 
-- `services/nodes/src/nodes.py`: configuration validation, virtual-node management, MQTT client, telemetry loop, and control health listener.
+- `services/nodes/src/nodes.py`: configuration validation, virtual-node management, MQTT client, telemetry loop, and restricted control listener.
 - `services/nodes/src/sensor.py`: independent read-only observation of the shared process, with optional node-local measurement bias.
 - `services/nodes/src/frame.py`: per-node boot identifier, shared sequence counter, nonce generation, and 94-byte HMAC-authenticated frame creation using the shared library.
 - `services/nodes/src/challenge.py`: `nonce_hex`, `node_id` request to `frame_hex` type-2 response, without traversing the telemetry gateway.
@@ -41,7 +41,7 @@ Create `secrets/mqtt_password` containing the broker password for the `node` MQT
 
     docker compose up --build -d
 
-Both HTTP listeners run in the same container, on distinct ports. `8300` accepts requests only from 10.60.30.10 and loopback. In addition, the host network/firewall configuration must restrict NET-CONTROL to the intended source; application checks alone do not establish the network topology. Agent configuration operations beyond health are not specified in V1 and have not been invented here.
+Both HTTP listeners run in the same container, on distinct ports. `8300` accepts requests only from 10.60.30.10 and loopback. In addition, the host network/firewall configuration must restrict NET-CONTROL to the intended source; application checks alone do not establish the network topology. Runtime H2 bias control extends the V1 health interface; it modifies only the selected virtual sensor's measurement bias.
 
 ## Verification
 

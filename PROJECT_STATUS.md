@@ -27,6 +27,7 @@ This file is the **single authoritative implementation checkpoint** for continua
 | eacld-edge-control / VM-EDGE | edge/services/edge-control/ | Initial implementation committed | 8 unit/API tests committed; local socket + HTTP integration and live-VM operation not independently verified |
 | eacld-core / VM-CORE | core/services/core/ | Initial implementation committed | 9 new tests committed; original E0 core 9/9 tests passed locally; live MQTT/Postgres/VM integration unverified |
 | Existing E0 Bayesian engine | core/vendor/e0/e0_source.zip.b64 | Original E0 source and calibrated model vendored without private data | Original SHA-256 verified from Drive; original E0 core tests 9/9 passed locally |
+| H1/H2 operator experiments | control/experiments/, VM-CORE restricted diagnosis, VM-NODES runtime bias | Development branch feature/h2-experiment-runner | Four H2 local runner mock tests passed; node bias control tests added |
 | Distributed VM deployment | Five virtual machines | Pending | Mihai is coordinating hardware availability, VM setup, networking, and base software; a 10-day infrastructure window has been requested |
 | GitHub Actions / service unit tests | .github/workflows/eacld-unit-tests.yml | Manual dispatch only | Seven earlier push-triggered workflow runs failed in the core job; edge job passed in the latest run; no deployment or E2E verification established |
 
@@ -92,6 +93,7 @@ Consult the TUIAȘI research project documentation and the Google Drive document
 | 2026-11-11 | Transferred both repositories to Edi-Mihai-Doctoral-Research and restored GitHub connector access | Organization transfer |
 | 2026-11-11 | Sent Mihai the EACLD-Testbed handoff and technical-documentation folder; requested hardware availability for 10 days | Coordination by email |
 | 2026-11-11 | Began runnable H1 experiment automation, guarded VM-CORE telemetry capture and local tests on a separate branch; live VM run pending | feature/h1-experiment-runner |
+| 2026-11-11 | Added H2 dynamic node bias control, one-command operator runner, evidence collection, error cleanup, tests and execution instructions | feature/h2-experiment-runner |
 
 ## H1 experiment runner under review
 
@@ -106,6 +108,22 @@ exercised locally with mocked services; no live distributed deployment was
 performed. The core HTTP integration test is committed but remains to be
 executed in the full project environment. The existing CI E0 import failure
 remains unresolved. No H1 scientific result is claimed from this branch.
+
+## H2 experiment implementation
+
+Branch `feature/h2-experiment-runner` is based on the H1 work. VM-NODES
+supports source-restricted, in-memory changes to one node's measurement bias,
+without rewriting `nodes.json` or restarting the service. The H2 runner on
+VM-CONTROL records the baseline frame, changes bias, diagnoses the exact
+authenticated high-temperature frame through the H1 telemetry-ID guard,
+separately records the private intervention and process state, and restores
+the previous bias even on failure.
+
+Focused local operator tests covered successful execution, telemetry-ID
+conflict/retry, cleanup after a failed diagnosis and pre-execution parameter
+validation (4 passed). Node control API tests are included under
+`nodes/tests/test_bias_control.py`. Running instructions are under
+`control/experiments/README.md` and `nodes/README.md`.
 
 ## 6. How to resume
 

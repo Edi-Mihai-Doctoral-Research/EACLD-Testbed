@@ -84,6 +84,8 @@ def validate(args: argparse.Namespace) -> None:
         value = getattr(args, field)
         if not 1 <= len(value) <= 128 or any(c in value for c in ("/", "\\", "\x00")):
             raise ProtocolError(f"invalid {field}")
+    if args.mode != "nominal":
+        raise ProtocolError("H1 runner implements only nominal conditions")
     if not 0 <= args.node_id <= 65535:
         raise ProtocolError("node_id outside uint16 range")
     if not -(2**31) <= args.baseline_temperature_mc < 2**31:
@@ -249,7 +251,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--episode-id", required=True)
     p.add_argument("--block-id", required=True)
     p.add_argument("--node-id", type=int, required=True)
-    p.add_argument("--mode", choices=("nominal", "degraded"), required=True)
+    p.add_argument("--mode", choices=("nominal",), required=True)
     p.add_argument("--baseline-temperature-mc", type=int, required=True)
     p.add_argument("--high-delta-mc", type=int, required=True)
     p.add_argument("--disturbance-temperature-mc", type=int, required=True)

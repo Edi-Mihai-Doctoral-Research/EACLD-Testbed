@@ -20,6 +20,7 @@ CONTROL_PORT = 8300
 CONTROL_SOURCE = "10.60.30.10"
 G2_SOCKET = "/run/eacld/g2/control.sock"
 MAX_BODY = 1024
+MAX_RESPONSE = 4096
 
 
 def request_g2(command: dict, *, socket_path: str = G2_SOCKET) -> dict:
@@ -31,14 +32,14 @@ def request_g2(command: dict, *, socket_path: str = G2_SOCKET) -> dict:
         client.connect(socket_path)
         client.sendall(data)
         chunks = bytearray()
-        while len(chunks) <= MAX_BODY:
+        while len(chunks) <= MAX_RESPONSE:
             part = client.recv(1024)
             if not part:
                 break
             chunks.extend(part)
             if b"\n" in part:
                 break
-    if len(chunks) > MAX_BODY or b"\n" not in chunks:
+    if len(chunks) > MAX_RESPONSE or b"\n" not in chunks:
         raise OSError("invalid G2 control response")
     response = json.loads(bytes(chunks).split(b"\n", 1)[0])
     if not isinstance(response, dict) or response.get("status") not in ("ok", "error", "unavailable"):
@@ -60,9 +61,20 @@ def _validate_command(value: object) -> dict:
             raise ValueError("offset must be a header byte index")
         if type(value["xor_mask"]) is not int or not 1 <= value["xor_mask"] <= 255:
             raise ValueError("xor_mask must be in [1, 255]")
-    elif action in ("replay", "clear"):
+    elif action == "replay":
+        if set(value) not in (
+            {"action", "node_id"},
+            {"action", "node_id", "frame_hex"},
+        ):
+            raise ValueError("unexpected replay fields")
+        if "frame_hex" in value:
+            frame = value["frame_hex"]
+            if (not isinstance(frame, str) or len(frame) != 188
+                    or any(ch not in "0123456789abcdef" for ch in frame)):
+                raise ValueError("invalid replay frame_hex")
+    elif action == "clear":
         if set(value) != {"action", "node_id"}:
-            raise ValueError("unexpected command fields")
+            raise ValueError("unexpected clear fields")
     else:
         raise ValueError("unsupported intervention action")
     return value

@@ -113,6 +113,33 @@ class PostgresStore:
             return None
         return Reading(int(row[0]), int(row[1]), bytes(row[2]), row[3], row[4])
 
+    def by_id(self, node_id: int, telemetry_id: int) -> Reading | None:
+        """Find one persisted frame, not necessarily the most recent frame."""
+        with self.connect() as conn, conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT id, node_id, payload, mac_status, sequence_status
+                FROM received_telemetry WHERE node_id=%s AND id=%s
+                """, (node_id, telemetry_id))
+            row = cursor.fetchone()
+        if row is None:
+            return None
+        return Reading(int(row[0]), int(row[1]), bytes(row[2]), row[3], row[4])
+
+    def matching_frame(self, node_id: int, after_id: int,
+                       frame: bytes) -> Reading | None:
+        """Return an exact payload received after the experiment watermark."""
+        with self.connect() as conn, conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT id, node_id, payload, mac_status, sequence_status
+                FROM received_telemetry
+                WHERE node_id=%s AND id>%s AND payload=%s
+                ORDER BY id ASC LIMIT 1
+                """, (node_id, after_id, frame))
+            row = cursor.fetchone()
+        if row is None:
+            return None
+        return Reading(int(row[0]), int(row[1]), bytes(row[2]), row[3], row[4])
+
     def record_diagnosis(self, public_result: dict, *, node_id: int, telemetry_id: int) -> None:
         from psycopg.types.json import Jsonb
         with self.connect() as conn, conn.cursor() as cursor:

@@ -241,3 +241,81 @@ VM-CORE tests, in its configured test environment:
 PYTHONPATH=core/services/core:core/vendor/e0:shared python3 -m unittest \
   discover -s core/tests -p test_h3_core_selection.py -v
 ```
+
+
+## H4 — authenticated telemetry replay
+
+H4 retransmits a **previously forwarded, authentic** 94-byte sensor frame.
+The original HMAC is preserved. The VM-CORE sequence registry records the
+retransmission as **stale**, whereas the HMAC verification remains **valid**.
+The intervening newer frame is expected to be both authentic and fresh.
+
+The operator executes H4 from VM-CONTROL with the same five-VM services
+used for H1–H3:
+
+```bash
+cd /opt/eacld/control
+python3 experiments/h4_run.py \
+  --episode-id H4-001 \
+  --block-id B01 \
+  --node-id 1 \
+  --mode nominal \
+  --baseline-temperature-mc 22000 \
+  --high-delta-mc 3000 \
+  --humidity-mpct 50000 \
+  --timeout-seconds 120
+```
+
+The example values are in milli-degrees Celsius and milli-percent units.
+The nominal process is held at 22000 mC and 50000 mPct; H4 changes neither
+the sensor bias nor the physical-process state.
+
+The runner performs the following sequence:
+
+1. Verify control-agent readiness, zero node bias and the absence of a
+   pending G2 intervention. Record the prior G2 replay event identifier.
+2. Reset the simulated process and identify a new, authenticated, fresh
+   telemetry frame as the **reference**. Preserve its full 94-byte payload
+   and original VM-CORE record ID.
+3. Stage G2 `replay` with `node_id` and the reference `frame_hex`.
+   G2 atomically checks that this exact frame exists in its bounded recent
+   forwarding history (64 frames per node); the operator does not supply
+   arbitrary bytes for publication.
+4. When G2 receives a newer frame with the same node and boot identifier,
+   it forwards the new frame, then republishes the selected reference bytes.
+   The event records the reference, trigger and replayed frame byte strings.
+5. Verify the G2 replay event, the byte-for-byte identity of the copied
+   frame, and the strictly increasing trigger sequence number.
+6. Locate the fresh trigger frame in VM-CORE using its exact payload and
+   record-ID watermark; subsequently locate the replayed reference payload
+   **after the trigger's record ID**. Require `mac_status=valid` and
+   `sequence_status=stale` on the replayed record.
+7. Diagnose that selected stale record via `selected_telemetry_id`; read
+   back the persisted EACLD decision and verify the exact input message.
+8. Save the private H4 intervention record on VM-CONTROL, confirm unchanged
+   process state, and clear G2 intervention state even after an error.
+
+The output directory is `~/eacld-experiments/H4-001/`.
+Successful execution records `parameters.json`,
+`reference_telemetry.json`, `edge_initial_status.json`,
+`edge_replay_evidence.json`, `core_trigger_telemetry.json`,
+`core_replayed_telemetry.json`, `diagnosis_response.json`,
+`core_diagnosis_record.json`, `private_ground_truth.json`,
+`edge_cleanup.json` and `manifest.json`. Errors are recorded in
+`failure.json`. Each episode requires a distinct identifier.
+
+Run focused regression tests from the repository root:
+
+```bash
+python3 -m unittest discover -s control/tests -p test_h4_run.py -v
+PYTHONPATH=edge/services/g2:shared python3 -m unittest \
+  discover -s edge/tests -p test_h4_replay_evidence.py -v
+PYTHONPATH=core/services/core:core/vendor/e0:shared python3 -m unittest \
+  discover -s core/tests -p test_h4_replay_selection.py -v
+```
+
+The four experiment runners are `h1_run.py`, `h2_run.py`, `h3_run.py`
+and `h4_run.py`. They use the common VM-CORE observation endpoints,
+operator-only control routes, stable telemetry IDs and separate
+VM-CONTROL ground-truth artifacts. Each experiment can be executed as an
+independent, uniquely identified episode.

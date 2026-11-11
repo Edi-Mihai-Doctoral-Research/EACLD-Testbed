@@ -84,3 +84,21 @@ by VM-CONTROL from G2, not inferred inside VM-CORE.
 
 Focused tests are in `core/tests/test_operator_api.py` and
 `core/tests/test_h3_core_selection.py`.
+
+
+## H4 authenticated replay classification
+
+The H4 operator reuses `GET /v1/telemetry/match`,
+`POST /v1/diagnose` with `selected_telemetry_id`, and the persisted
+diagnosis-readback endpoint introduced for H1–H3. H4 requires no new
+VM-CORE API or change to the original E0 policy engine.
+
+For a retransmitted, previously accepted 94-byte frame, the verifier
+records `mac_status=valid` because its signed bytes are unchanged.
+The persisted sequence watermark produces `sequence_status=stale`
+once the original and a strictly newer message have already been
+accepted for that node and boot. The H4 runner selects this exact
+stored record for B6 inference; later normal traffic cannot silently
+replace the diagnostic input.
+
+Focused tests are in `core/tests/test_h4_replay_selection.py`.

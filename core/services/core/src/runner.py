@@ -29,7 +29,8 @@ class DiagnosisRunner:
     def diagnose(self, *, node_id: int, mode: str, episode_id: str,
                  block_id: str, baseline_temperature_mC: int,
                  high_delta_mC: int,
-                 expected_telemetry_id: int | None = None) -> dict:
+                 expected_telemetry_id: int | None = None,
+                 selected_telemetry_id: int | None = None) -> dict:
         if type(node_id) is not int or not 0 <= node_id <= 65535:
             raise ValueError("invalid node_id")
         if mode not in self.config["modes"]:
@@ -38,9 +39,12 @@ class DiagnosisRunner:
             raise ValueError("invalid episode_id")
         if not isinstance(block_id, str) or not 1 <= len(block_id) <= 128:
             raise ValueError("invalid block_id")
-        reading = self.store.latest(node_id)
+        if selected_telemetry_id is not None:
+            reading = self.store.by_id(node_id, selected_telemetry_id)
+        else:
+            reading = self.store.latest(node_id)
         if reading is None:
-            raise LookupError("no accepted telemetry available for node")
+            raise LookupError("no accepted telemetry for requested node/identifier")
         if expected_telemetry_id is not None and reading.id != expected_telemetry_id:
             from .experiment_api import TelemetryChanged
             raise TelemetryChanged("telemetry changed before diagnosis")

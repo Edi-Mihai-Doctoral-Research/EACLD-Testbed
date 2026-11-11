@@ -15,7 +15,7 @@ from eacld_contracts.topics import ACCEPTED_SUBSCRIPTION
 
 from .ingest import PostgresStore
 from .experiment_api import (
-    TelemetryChanged, parse_node, parse_episode,
+    TelemetryChanged, parse_node, parse_episode, parse_frame_match,
     summarize_reading, summarize_diagnosis,
 )
 from .runner import DiagnosisRunner, load_engine
@@ -67,15 +67,16 @@ def _valid_request(request: object, modes: list[str]) -> dict:
         "node_id", "mode", "episode_id", "block_id",
         "baseline_temperature_mC", "high_delta_mC"
     }
-    if not isinstance(request, dict) or not (
-        set(request) == required or
-        set(request) == required | {"expected_telemetry_id"}
-    ):
+    optional = set(request) - required if isinstance(request, dict) else None
+    if (not isinstance(request, dict) or not required.issubset(request)
+            or optional not in (set(), {"expected_telemetry_id"},
+                                {"selected_telemetry_id"})):
         raise ValueError("invalid diagnosis request fields")
-    if "expected_telemetry_id" in request:
-        expected = request["expected_telemetry_id"]
-        if type(expected) is not int or expected < 1 or expected >= 1 << 63:
-            raise ValueError("invalid expected telemetry identifier")
+    for field in ("expected_telemetry_id", "selected_telemetry_id"):
+        if field in request:
+            selected = request[field]
+            if type(selected) is not int or selected < 1 or selected >= 1 << 63:
+                raise ValueError("invalid telemetry identifier")
     node = request["node_id"]
     if type(node) is not int or not 0 <= node <= 65535:
         raise ValueError("invalid node_id")
@@ -139,6 +140,23 @@ def create_control_server(runner: DiagnosisRunner, gateway: CoreMqtt, *,
                     return
                 if reading is None:
                     self.send_json(404, {"detail": "no telemetry for node"})
+                else:
+                    self.send_json(200, summarize_reading(reading))
+                return
+            if self.path.startswith("/v1/telemetry/match?"):
+                try:
+                    node_id, after_id, frame = parse_frame_match(self.path)
+                except ValueError:
+                    self.send_json(400, {"detail": "invalid frame match query"})
+                    return
+                try:
+                    reading = runner.store.matching_frame(node_id, after_id, frame)
+                except (OSError, psycopg.Error):
+                    LOGGER.exception("VM-CORE frame lookup failed")
+                    self.send_json(503, {"detail": "telemetry backend unavailable"})
+                    return
+                if reading is None:
+                    self.send_json(404, {"detail": "no matching telemetry"})
                 else:
                     self.send_json(200, summarize_reading(reading))
                 return

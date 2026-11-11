@@ -101,11 +101,11 @@ def verify_replay(event: dict, reference: dict,
 
 
 def _matching_url(core: str, node_id: int, after_id: int, frame_hex: str) -> str:
-    return f"{core}/v1/telemetry/match?{urlencode({
-        'node_id': node_id,
-        'after_id': after_id,
-        'frame_hex': frame_hex,
-    })}"
+    query = urlencode({
+        "node_id": node_id, "after_id": after_id,
+        "frame_hex": frame_hex,
+    })
+    return f"{core}/v1/telemetry/match?{query}"
 
 
 def _wait_for_frame(request, url: str, *, node_id: int,

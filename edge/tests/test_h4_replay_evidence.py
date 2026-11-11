@@ -109,7 +109,8 @@ class H4GatewayTests(unittest.TestCase):
         gateway.stage_replay(1, frame_hex=first.hex())
         output = FakeClient()
         emit(gateway, output, b"invalid")
-        self.assertEqual([p[1] for p in output.published], [b"invalid"])
+        emit(gateway, output, signed(10))
+        self.assertEqual([p[1] for p in output.published], [b"invalid", signed(10)])
         self.assertEqual(gateway.intervention_status(1)["pending_action"], "replay")
         emit(gateway, output, signed(11))
         self.assertEqual([p[1] for p in output.published][-2:], [signed(11), first])
@@ -166,6 +167,8 @@ class H4ControlAgentTests(unittest.TestCase):
     def test_post_exact_replay_and_fetch_large_evidence(self):
         first, trigger = signed(1), signed(2)
         emit(self.gateway, FakeClient(), first)
+        self.gateway.stage_mutation(1, offset=40, xor_mask=37)
+        emit(self.gateway, FakeClient(), signed(3))
         with self.post({
             "action": "replay", "node_id": 1, "frame_hex": first.hex()
         }) as response:
@@ -175,7 +178,8 @@ class H4ControlAgentTests(unittest.TestCase):
         evidence = self.status()
         self.assertEqual(evidence["last_replay"]["replayed_frame_hex"], first.hex())
         self.assertIsNone(evidence["pending_action"])
-        self.assertGreater(len(json.dumps(evidence)), 1024 if evidence["last_mutation"] else 500)
+        self.assertIsNotNone(evidence["last_mutation"])
+        self.assertGreater(len(json.dumps(evidence)), 1024)
         with self.post({"action": "clear", "node_id": 1}) as response:
             self.assertEqual(json.load(response)["status"], "ok")
 

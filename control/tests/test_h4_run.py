@@ -10,6 +10,8 @@ from types import SimpleNamespace
 import unittest
 from urllib.parse import parse_qs, urlsplit
 
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "shared"))
 from eacld_contracts.frame import FrameHeader, sign_frame
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "experiments"

@@ -165,10 +165,10 @@ class H4ControlAgentTests(unittest.TestCase):
             return json.load(response)
 
     def test_post_exact_replay_and_fetch_large_evidence(self):
-        first, trigger = signed(1), signed(2)
+        first, trigger = signed(1), signed(3)
         emit(self.gateway, FakeClient(), first)
         self.gateway.stage_mutation(1, offset=40, xor_mask=37)
-        emit(self.gateway, FakeClient(), signed(3))
+        emit(self.gateway, FakeClient(), signed(2))
         with self.post({
             "action": "replay", "node_id": 1, "frame_hex": first.hex()
         }) as response:

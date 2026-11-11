@@ -1,12 +1,12 @@
 # EACLD-Testbed — Project Status and Continuation Log
 
 **Last updated:** 2026-11-11  
-**Repository:** eduardmihailescu-creator/EACLD-Testbed  
+**Repository:** Edi-Mihai-Doctoral-Research/EACLD-Testbed  
 **Visibility:** Private  
 **Working branch:** main  
 **Last completed implementation checkpoint:** This commit on main (inspect Git HEAD for its SHA)  
-**Current phase:** All seven initial application service implementations committed; distributed deployment pending  
-**Next task:** Deploy the services on five VMs and verify end-to-end integration
+**Current phase:** All seven initial application service implementations committed; infrastructure allocation and distributed deployment pending  
+**Next task:** Mihai to identify temporary hardware resources for a 10-day testbed window, prepare five VMs, deploy the services, and begin end-to-end integration
 
 This file is the **single authoritative implementation checkpoint** for continuation across collaborators and ChatGPT sessions. README.md is the repository entry point; this document holds the current status and chronological work log. The executable source on main is authoritative for implemented code; the V1 architecture document is authoritative for technical requirements.
 
@@ -27,7 +27,8 @@ This file is the **single authoritative implementation checkpoint** for continua
 | eacld-edge-control / VM-EDGE | edge/services/edge-control/ | Initial implementation committed | 8 unit/API tests committed; local socket + HTTP integration and live-VM operation not independently verified |
 | eacld-core / VM-CORE | core/services/core/ | Initial implementation committed | 9 new tests committed; original E0 core 9/9 tests passed locally; live MQTT/Postgres/VM integration unverified |
 | Existing E0 Bayesian engine | core/vendor/e0/e0_source.zip.b64 | Original E0 source and calibrated model vendored without private data | Original SHA-256 verified from Drive; original E0 core tests 9/9 passed locally |
-| Distributed VM deployment | Five virtual machines | Not verified | Ubuntu 24.04 / Python 3.12 / live Mosquitto and inter-VM tests pending |
+| Distributed VM deployment | Five virtual machines | Pending | Mihai is coordinating hardware availability, VM setup, networking, and base software; a 10-day infrastructure window has been requested |
+| GitHub Actions / service unit tests | .github/workflows/eacld-unit-tests.yml | Manual dispatch only | Seven earlier push-triggered workflow runs failed in the core job; edge job passed in the latest run; no deployment or E2E verification established |
 
 
 ## 2. Completion of the two authorized service implementations
@@ -36,7 +37,7 @@ This file is the **single authoritative implementation checkpoint** for continua
 
 **eacld-core / VM-CORE: initial implementation committed.** Core subscribes only to accepted/+ using the core MQTT principal, parses the original 94-byte frame contract, validates HMAC against VM-CORE-only node keys and persists anti-replay state and received telemetry in internal PostgreSQL 16. The private E0 computational source, fitted model and configuration were selectively copied from the verified Drive archive into a compact reproducible source package without any private ground-truth datasets. E0 eacld/core.py is unmodified and loaded by the container at build time. The LiveEnvironment adapter executes four available physical/security probes and returns only observed results and nominal configured costs. The explicit diagnosis endpoint on VM-CORE NET-CONTROL requires operator-provided mode, episode identifiers, baseline and threshold.
 
-**Verification status:** Original E0 mathematical core tests: 9 passed locally. New tests for edge-control and core services: 8 and 9 committed, respectively, alongside a GitHub test workflow. GitHub Actions success: not confirmed. Integration testing pending: live Mosquitto, PostgreSQL, Ubuntu/Docker, five-VM connectivity and end-to-end execution. Runtime secrets and private experimental labels are excluded from GitHub.
+**Verification status:** Original E0 mathematical core tests: 9 passed locally. New tests for edge-control and core services: 8 and 9 committed, respectively. Seven GitHub Actions runs triggered by pushes on 10–11 November 2026 failed in the VM-CORE job: `ModuleNotFoundError: No module named 'eacld.simulator'` during E0 test collection; the latest VM-EDGE job passed. The workflow was changed to `workflow_dispatch` (manual execution only) in commit `19dd01f7`; the import error remains unresolved. Integration testing pending: live Mosquitto, PostgreSQL, Ubuntu/Docker, five-VM connectivity and end-to-end execution. Runtime secrets and private experimental labels are excluded from GitHub.
 
 
 ## 3. Implementation and repository decisions
@@ -50,14 +51,15 @@ This file is the **single authoritative implementation checkpoint** for continua
 7. The existing E0 Bayesian computational core is reused, not rewritten. VM-CORE integrates it through LiveEnvironment.
 8. The V1 technical specification is maintained in Romanian on TUIAȘI Google Drive for the infrastructure implementer; this repository is in English.
 9. Secrets, passwords, per-node HMAC keys, runtime databases, and private ground-truth artifacts are not committed to GitHub. The root .dockerignore also excludes local secrets and runtime files from Docker build contexts.
-10. The original E0 source, configurations and test scripts are maintained in the separate private repository `eduardmihailescu-creator/EACLD-Mathematical-Model`. The deployment-oriented E0 integration remains in `core/vendor/e0/`.
+10. The original E0 source, configurations and test scripts are maintained in the separate private repository `Edi-Mihai-Doctoral-Research/EACLD-Mathematical-Model`. The deployment-oriented E0 integration remains in `core/vendor/e0/`.
+11. Both repositories were transferred to the GitHub organization `Edi-Mihai-Doctoral-Research` on 11 November 2026; repository access through the TUIAȘI ChatGPT GitHub connector has been restored.
 
-**Division of work:** Mihai prepares the five VMs, networking, and base software. Repository development covers EACLD application services, integrations, configurations, and automated tests. Deployment on the prepared VMs and end-to-end verification are joint integration activities.
+**Division of work:** Mihai prepares the five VMs, networking, and base software, and identifies temporary hardware resources for a 10-day testbed window. An invitation with the Owner role was issued for Mihai in `Edi-Mihai-Doctoral-Research`. The infrastructure assignment and technical documentation were communicated to him by email on 11 November 2026. Repository development covers EACLD application services, integrations, configurations, and tests. Deployment on the prepared VMs and end-to-end verification are joint integration activities.
 
 ## 4. Reference documents and locations
 
 **Technical architecture (implementation authority):**  
-TUIAȘI Google Drive → PhD TUIASI → 2 Direcții de cercetare → 04 EACLD – diagnostic cauzal → 02 Testbed experimental → "EACLD - Arhitectura si implementarea testbedului experimental - V1.docx".
+TUIAȘI Google Drive → PhD TUIASI → 2 Direcții de cercetare → 04 EACLD – diagnostic cauzal → 02 Testbed experimental → "EACLD - Arhitectura si implementarea testbedului experimental - V1.docx". The folder has been shared for Mihai's implementation work: https://drive.google.com/drive/folders/111T-Dr2pTu4cmwwpYxrpn9ZKcazLb7sI?usp=sharing.
 
 **Publication supplement:**  
 TUIAȘI Google Drive → PhD TUIASI → 3 Activitatea de publicare → 04 Activitate publicare 2026-2027 (Anul V) → 004 MDPI Information = ÎN LUCRU → 01 Manuscris → "EACLD - Supplementary Material S2 - MDPI Information - V7.docx".
@@ -66,7 +68,7 @@ TUIAȘI Google Drive → PhD TUIASI → 3 Activitatea de publicare → 04 Activi
 Consult the TUIAȘI research project documentation and the Google Drive document "README - MDPI Information - Orientare și continuitate". Follow the approved architecture and document formatting. Record implementation, proposals and verification results distinctly.
 
 **Existing E0 computational artifact:**  
-"EACLD_E0_Experiment_2026_11_04.zip"; its existing eacld/core.py is to be incorporated into VM-CORE under core/vendor/e0 when the integration phase begins.
+"EACLD_E0_Experiment_2026_11_04.zip"; the existing E0 Bayesian core has already been incorporated into VM-CORE under `core/vendor/e0/`. The original computational source is maintained in the separate `EACLD-Mathematical-Model` repository.
 
 ## 5. Work log
 
@@ -85,11 +87,15 @@ Consult the TUIAȘI research project documentation and the Google Drive document
 | 2026-11-10 | VM-CORE telemetry, replay registry, PostgreSQL, preserved Bayesian E0 vendor artifact, LiveEnvironment, 9 new tests and service Compose committed | This commit on main |
 | 2026-11-11 | Imported original E0 computational source, configurations, tests and documentation under EACLD-E0/ | 6122138c |
 | 2026-11-11 | Moved original E0 source to the separate EACLD-Mathematical-Model repository; retained VM-CORE integration | EACLD-Mathematical-Model b8ac4327 |
+| 2026-11-11 | Removed E0 source duplication from EACLD-Testbed; updated repository references | b2af078c |
+| 2026-11-11 | Disabled automatic GitHub Actions push triggers; retained manual execution only | 19dd01f7 |
+| 2026-11-11 | Transferred both repositories to Edi-Mihai-Doctoral-Research and restored GitHub connector access | Organization transfer |
+| 2026-11-11 | Sent Mihai the EACLD-Testbed handoff and technical-documentation folder; requested hardware availability for 10 days | Coordination by email |
 
 ## 6. How to resume
 
 1. Open this repository and read README.md, then this PROJECT_STATUS.md.
 2. Read the current architecture V1 from the TUIAȘI research directory before modifying implementation contracts.
-3. Inspect main and the latest implemented component; use the exact continuation point in Section 2.
+3. Inspect main and the latest implemented component; continue with five-VM provisioning and integration. The previous GitHub Actions E0 import failure is recorded in Section 2; workflows run manually only.
 4. When new work is completed, update Sections 1, 2, and 5 in the **same commit** as the implementation whenever possible. Record implemented components and test results.
 

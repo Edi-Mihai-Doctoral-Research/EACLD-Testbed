@@ -212,11 +212,12 @@ def run_h3(args: argparse.Namespace, *, request=request_json,
             raise ProtocolError("G2 mutation event was not observed")
         save_json(out / "edge_mutation_evidence.json", event)
 
-        match_url = f"{core}/v1/telemetry/match?{urlencode({
-            'node_id': args.node_id,
-            'after_id': baseline['telemetry_id'],
-            'frame_hex': event['mutated_frame_hex'],
-        })}"
+        match_query = urlencode({
+            "node_id": args.node_id,
+            "after_id": baseline["telemetry_id"],
+            "frame_hex": event["mutated_frame_hex"],
+        })
+        match_url = f"{core}/v1/telemetry/match?{match_query}"
         deadline = clock() + args.timeout_seconds
         while clock() < deadline:
             try:

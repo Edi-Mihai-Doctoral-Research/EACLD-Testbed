@@ -1,7 +1,6 @@
 name: EACLD service unit tests
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   edge:

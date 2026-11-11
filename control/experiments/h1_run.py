@@ -42,7 +42,7 @@ def request_json(method: str, url: str, body: dict | None = None) -> dict:
         **({"Content-Type": "application/json"} if data is not None else {}),
     })
     try:
-        with build_opener(ProxyHandler({})).open(req, timeout=5) as response:
+        with build_opener(ProxyHandler({})).open(req, timeout=30) as response:
             value = json.load(response)
             if not isinstance(value, dict):
                 raise ProtocolError(f"non-object JSON response from {url}")

@@ -7,6 +7,7 @@ never has HMAC keys or re-signs frames.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import logging
@@ -72,8 +73,11 @@ class Gateway2:
         self._lock = threading.Lock()
         self._pending: dict[int, Mutation | Replay] = {}
         self._last_forwarded: dict[int, bytes] = {}
+        self._recent_forwarded: dict[int, deque[bytes]] = {}
         self._mutation_events: dict[int, dict] = {}
         self._mutation_counter = 0
+        self._replay_events: dict[int, dict] = {}
+        self._replay_counter = 0
 
     def stage_mutation(self, node_id: int, *, offset: int, xor_mask: int) -> None:
         """XOR one header byte of the next 94-byte frame; keep MAC unchanged."""
@@ -85,13 +89,29 @@ class Gateway2:
         with self._lock:
             self._pending[node_id] = Mutation(offset, xor_mask)
 
-    def stage_replay(self, node_id: int) -> None:
-        """Replay the last successfully queued 94-byte frame for this node."""
+    def stage_replay(self, node_id: int, *, frame_hex: str | None = None) -> None:
+        """Queue a captured, previously forwarded frame for one-time replay.
+
+        When provided, frame_hex must identify an exact frame still present
+        in G2's bounded forwarding history. This prevents a race between
+        selecting an authenticated VM-CORE baseline and staging the replay.
+        """
         _check_node_id(node_id)
+        chosen: bytes | None = None
+        if frame_hex is not None:
+            if (not isinstance(frame_hex, str) or len(frame_hex) != FRAME_SIZE * 2
+                    or any(ch not in "0123456789abcdef" for ch in frame_hex)):
+                raise ValueError("frame_hex must be canonical 94-byte lowercase hex")
+            chosen = bytes.fromhex(frame_hex)
         with self._lock:
-            previous = self._last_forwarded.get(node_id)
-            if previous is None:
-                raise ValueError("no previously forwarded frame is available")
+            if node_id in self._pending:
+                raise ValueError("another G2 intervention is already pending")
+            previous = self._last_forwarded.get(node_id) if chosen is None else chosen
+            if previous is None or previous not in self._recent_forwarded.get(node_id, ()):
+                raise ValueError("selected frame is absent from recent G2 forwarding history")
+            if (len(previous) != FRAME_SIZE or previous[1] != 1
+                    or int.from_bytes(previous[2:4], "big") != node_id):
+                raise ValueError("selected frame is not target-node telemetry")
             self._pending[node_id] = Replay(previous)
 
     def clear_intervention(self, node_id: int) -> None:
@@ -100,10 +120,10 @@ class Gateway2:
             self._pending.pop(node_id, None)
 
     def intervention_status(self, node_id: int) -> dict:
-        """Expose one-shot action status and the actual G2 H3 wire evidence.
+        """Expose one-shot action status and H3/H4 G2 wire evidence.
 
-        The previous mutation event survives clear; status never includes
-        sensor keys, private plant state or research cause labels.
+        The latest mutation and replay events survive clear until G2 restarts.
+        Neither status nor frames include a research cause label or node key.
         """
         _check_node_id(node_id)
         with self._lock:
@@ -117,6 +137,10 @@ class Gateway2:
                 "last_mutation": (
                     dict(self._mutation_events[node_id])
                     if node_id in self._mutation_events else None
+                ),
+                "last_replay": (
+                    dict(self._replay_events[node_id])
+                    if node_id in self._replay_events else None
                 ),
             }
 
@@ -172,6 +196,9 @@ class Gateway2:
                 return
             if len(outgoing) == FRAME_SIZE:
                 self._last_forwarded[node_id] = outgoing
+                self._recent_forwarded.setdefault(
+                    node_id, deque(maxlen=64)
+                ).append(outgoing)
             if isinstance(action, Mutation) and len(payload) == FRAME_SIZE:
                 self._mutation_counter += 1
                 self._mutation_events[node_id] = {
@@ -183,8 +210,19 @@ class Gateway2:
                 }
                 self._pending.pop(node_id, None)
             elif isinstance(action, Replay):
+                if (len(payload) != FRAME_SIZE or payload[1] != 1
+                        or int.from_bytes(payload[2:4], "big") != node_id):
+                    LOGGER.warning("G2 deferred replay: trigger is not target telemetry")
+                    return
                 result = client.publish(target, action.payload, qos=1, retain=False)
                 if result.rc == 0:
+                    self._replay_counter += 1
+                    self._replay_events[node_id] = {
+                        "event_id": self._replay_counter,
+                        "reference_frame_hex": action.payload.hex(),
+                        "trigger_frame_hex": payload.hex(),
+                        "replayed_frame_hex": action.payload.hex(),
+                    }
                     self._pending.pop(node_id, None)
                 else:
                     LOGGER.error("G2 MQTT replay failed with code %s", result.rc)
@@ -242,8 +280,12 @@ def create_command_server(gateway: Gateway2, path: str = CONTROL_SOCKET):
                                            offset=request["offset"],
                                            xor_mask=request["xor_mask"])
                     reply = {"status": "ok"}
-                elif action == "replay" and set(request) == {"action", "node_id"}:
-                    gateway.stage_replay(request["node_id"])
+                elif action == "replay" and set(request) in (
+                    {"action", "node_id"},
+                    {"action", "node_id", "frame_hex"},
+                ):
+                    gateway.stage_replay(request["node_id"],
+                                         frame_hex=request.get("frame_hex"))
                     reply = {"status": "ok"}
                 elif action == "clear" and set(request) == {"action", "node_id"}:
                     gateway.clear_intervention(request["node_id"])

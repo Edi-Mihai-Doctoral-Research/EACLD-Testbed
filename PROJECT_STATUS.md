@@ -3,12 +3,14 @@
 **Last updated:** 2026-11-11  
 **Repository:** Edi-Mihai-Doctoral-Research/EACLD-Testbed  
 **Visibility:** Private  
-**Working branch:** feature/h3-experiment-runner  
-**Last completed implementation checkpoint:** The current feature-branch HEAD (inspect Git HEAD for its SHA)  
-**Current phase:** All seven initial application service implementations committed; infrastructure allocation and distributed deployment pending  
-**Next task:** Mihai to identify temporary hardware resources for a 10-day testbed window, prepare five VMs, deploy the services, and begin end-to-end integration
+**Central status branch:** main  
+**Main implementation checkpoint:** Seven initial application services committed on main; H1–H4 experiment code developed separately  
+**Latest experimental branch:** feature/h4-experiment-runner (includes H1–H3 implementation history)  
+**Current phase:** H1–H4 operator implementations committed on feature branches; unit-level consolidation and five-VM integration remain to be completed  
+**Next software task:** Integrate and verify the four H1–H4 experimental procedures as a coherent regression suite  
+**Next infrastructure task:** Mihai to identify temporary hardware resources for a 10-day testbed window, prepare five VMs, deploy the services, and begin end-to-end integration
 
-This file is the **single authoritative implementation checkpoint** for continuation across collaborators and ChatGPT sessions. README.md is the repository entry point; this document holds the current status and chronological work log. The executable source on main is authoritative for implemented code; the V1 architecture document is authoritative for technical requirements.
+This file is the **single authoritative implementation checkpoint** for continuation across collaborators and ChatGPT sessions. README.md is the repository entry point; this document holds the current status and chronological work log. The source on each referenced Git branch defines that branch's implementation; main retains the initial service implementation. The V1 architecture document is authoritative for technical requirements.
 
 ## 1. Current implementation status
 
@@ -27,8 +29,10 @@ This file is the **single authoritative implementation checkpoint** for continua
 | eacld-edge-control / VM-EDGE | edge/services/edge-control/ | Initial implementation committed | 8 unit/API tests committed; local socket + HTTP integration and live-VM operation not independently verified |
 | eacld-core / VM-CORE | core/services/core/ | Initial implementation committed | 9 new tests committed; original E0 core 9/9 tests passed locally; live MQTT/Postgres/VM integration unverified |
 | Existing E0 Bayesian engine | core/vendor/e0/e0_source.zip.b64 | Original E0 source and calibrated model vendored without private data | Original SHA-256 verified from Drive; original E0 core tests 9/9 passed locally |
-| H1/H2 operator experiments | control/experiments/, VM-CORE restricted diagnosis, VM-NODES runtime bias | Development branch feature/h2-experiment-runner | Four H2 local runner mock tests passed; node bias control tests added |
-| H3 operator experiment | control/experiments/h3_run.py, G2 observation API, VM-CORE exact stored-frame selection | Implemented on feature/h3-experiment-runner | Focused edge, core and operator tests committed |
+| H1 — process intervention | control/experiments/h1_run.py; restricted VM-CORE telemetry/diagnosis API | Committed on feature/h1-experiment-runner; inherited by H2/H3 branches | Operator and API unit tests added; baseline, injected state and selected diagnostic frame recorded |
+| H2 — virtual sensor measurement bias | nodes/services/nodes/src/nodes.py; control/experiments/h2_run.py | Committed on feature/h2-experiment-runner; inherited by H3 branch | Four local runner tests recorded as passed; bias API tests and automatic restoration implemented |
+| H3 — G2 telemetry mutation | edge/services/g2/src/g2.py; edge/services/edge-control/src/agent.py; control/experiments/h3_run.py; VM-CORE frame selection | Committed on feature/h3-experiment-runner | Tests added for G2 mutation evidence, exact VM-CORE frame selection and operator cleanup |
+| H4 — authentic telemetry replay | edge/services/g2/src/g2.py; edge/services/edge-control/src/agent.py; control/experiments/h4_run.py; VM-CORE sequence registry and exact record selection | Committed on feature/h4-experiment-runner | Tests added for bounded frame capture, authentic stale replay, exact selected diagnosis and cleanup |
 | Distributed VM deployment | Five virtual machines | Pending | Mihai is coordinating hardware availability, VM setup, networking, and base software; a 10-day infrastructure window has been requested |
 | GitHub Actions / service unit tests | .github/workflows/eacld-unit-tests.yml | Manual dispatch only | Seven earlier push-triggered workflow runs failed in the core job; edge job passed in the latest run; no deployment or E2E verification established |
 
@@ -93,72 +97,30 @@ Consult the TUIAȘI research project documentation and the Google Drive document
 | 2026-11-11 | Disabled automatic GitHub Actions push triggers; retained manual execution only | 19dd01f7 |
 | 2026-11-11 | Transferred both repositories to Edi-Mihai-Doctoral-Research and restored GitHub connector access | Organization transfer |
 | 2026-11-11 | Sent Mihai the EACLD-Testbed handoff and technical-documentation folder; requested hardware availability for 10 days | Coordination by email |
-| 2026-11-11 | Began runnable H1 experiment automation, guarded VM-CORE telemetry capture and local tests on a separate branch; live VM run pending | feature/h1-experiment-runner |
-| 2026-11-11 | Added H2 dynamic node bias control, one-command operator runner, evidence collection, error cleanup, tests and execution instructions | feature/h2-experiment-runner |
-| 2026-11-11 | Implemented H3 G2 one-shot mutation evidence, strict frame identification, selection of persisted VM-CORE input, operator execution, cleanup, tests and documentation | feature/h3-experiment-runner |
+| 2026-11-11 | Added H1 experiment runner, baseline and intervention capture, telemetry-ID guard, persistent diagnosis observation and local tests | feature/h1-experiment-runner |
+| 2026-11-11 | Added H2 runtime node-local bias API, one-command experiment runner, evidence capture, automatic restoration and tests | feature/h2-experiment-runner |
+| 2026-11-11 | Added H3 G2 original/mutated frame evidence, restricted agent status, VM-CORE exact-frame diagnosis, experiment runner, cleanup and tests | feature/h3-experiment-runner |
+| 2026-11-11 | Synchronized central PROJECT_STATUS.md on main with H1–H3 feature-branch progress; code remains on feature branches | main |
+| 2026-11-11 | Implemented H4 exact prior-frame replay, G2 wire evidence, operator runner, VM-CORE stale-frame selection and focused tests; updated experiment and service READMEs | feature/h4-experiment-runner |
+| 2026-11-11 | Synchronized central PROJECT_STATUS.md on main with H4 and next integration checkpoint | main |
 
-## H1 experiment runner under review
+## 6. Experimental implementation history (H1–H3)
 
-Branch `feature/h1-experiment-runner` introduces an operator-side H1 runner,
-restricted VM-CORE observable telemetry/diagnosis lookups, optional exact
-telemetry-ID pinning during B6 inference, and local tests. It preserves the
-five-VM layout, original E0 Bayesian engine, private control/ground-truth
-boundary, and existing experimental configuration interfaces.
+**H1 — process intervention.** The `feature/h1-experiment-runner` branch adds `control/experiments/h1_run.py`, restricted VM-CORE evidence retrieval and an optional `expected_telemetry_id` guard for diagnosis of the latest authenticated telemetry. The operator procedure initializes the common process, schedules a process-level H1 intervention, records the resulting observations and saves the diagnostic decision alongside private intervention evidence held on VM-CONTROL. Tests and instructions are in `control/tests/`, `core/tests/` and `control/experiments/README.md`.
 
-**Evidence status:** operator sequencing and frame-decoding unit tests were
-exercised locally with mocked services; no live distributed deployment was
-performed. The core HTTP integration test is committed but remains to be
-executed in the full project environment. The existing CI E0 import failure
-remains unresolved. No H1 scientific result is claimed from this branch.
+**H2 — sensor measurement bias.** The `feature/h2-experiment-runner` branch derives from H1. VM-NODES accepts VM-CONTROL-restricted, in-memory bias changes per selected node. `control/experiments/h2_run.py` applies the bias, checks the unchanged common process, diagnoses the selected authenticated measurement, records the evidence and restores the original bias. Tests are in `nodes/tests/test_bias_control.py` and `control/tests/test_h2_run.py`.
 
-## H2 experiment implementation
+**H3 — gateway telemetry mutation.** The `feature/h3-experiment-runner` branch derives from H2 and therefore contains H1 and H2 development work. G2 records the original and XOR-modified 94-byte frames for a one-shot header mutation while preserving the original HMAC. VM-CORE supports exact payload lookup and diagnosis of a selected persisted telemetry ID, including after newer MQTT messages arrive. `control/experiments/h3_run.py` collects G2 and VM-CORE evidence and clears the intervention. Focused tests are in `edge/tests/test_h3_mutation_evidence.py`, `core/tests/test_h3_core_selection.py` and `control/tests/test_h3_run.py`.
 
-Branch `feature/h2-experiment-runner` is based on the H1 work. VM-NODES
-supports source-restricted, in-memory changes to one node's measurement bias,
-without rewriting `nodes.json` or restarting the service. The H2 runner on
-VM-CONTROL records the baseline frame, changes bias, diagnoses the exact
-authenticated high-temperature frame through the H1 telemetry-ID guard,
-separately records the private intervention and process state, and restores
-the previous bias even on failure.
+**H4 — authentic telemetry replay.** The `feature/h4-experiment-runner` branch extends H3. G2 maintains a bounded forwarding history and stages one previously forwarded 94-byte frame selected by exact bytes. When newer telemetry arrives for the same node and boot, G2 forwards it and retransmits the older frame unchanged. The event records the reference, triggering frame and replayed frame. `control/experiments/h4_run.py` correlates the original authenticated, fresh record with the newer trigger and the duplicated authenticated, stale record in VM-CORE. B6 inference uses the exact stale record; the E0 engine and existing diagnostic routes are reused. The G2 intervention is cleared on completion or error. Tests are in `edge/tests/test_h4_replay_evidence.py`, `core/tests/test_h4_replay_selection.py` and `control/tests/test_h4_run.py`.
 
-Focused local operator tests covered successful execution, telemetry-ID
-conflict/retry, cleanup after a failed diagnosis and pre-execution parameter
-validation (4 passed). Node control API tests are included under
-`nodes/tests/test_bias_control.py`. Running instructions are under
-`control/experiments/README.md` and `nodes/README.md`.
+The H1–H4 experiment code and associated READMEs reside in the feature-branch history, culminating in `feature/h4-experiment-runner`. The central status file is maintained on `main` and synchronized into the active development branch.
 
-## H3 experiment implementation
+## 7. How to resume
 
-Branch `feature/h3-experiment-runner` extends the H2 feature branch.
-The G2 one-shot mutation records the complete original and modified wire
-frames with a monotonic mutation event ID. Only VM-CONTROL can retrieve the
-record through the NET-CONTROL agent. G2 never re-signs the frame.
-
-VM-CORE can locate exactly the altered 94-byte payload after a baseline
-telemetry ID and diagnose that stored record by `selected_telemetry_id`,
-even when newer normal MQTT telemetry has arrived. The E0 Bayesian policy
-implementation is unchanged. H1/H2's `expected_telemetry_id` guard retains
-its original latest-frame behavior.
-
-The H3 runner validates the baseline process and node bias, stages one
-header-byte XOR, confirms G2's original/altered frames and unchanged MAC,
-collects VM-CORE's invalid-HMAC evidence and B6 result, and clears G2's
-pending intervention including on error. VM-CONTROL retains its own
-private H3 intervention record.
-
-Tests added:
-- `edge/tests/test_h3_mutation_evidence.py`
-- `core/tests/test_h3_core_selection.py`
-- `control/tests/test_h3_run.py`
-
-Execution instructions and collected artifact names are documented in
-`control/experiments/README.md`, with interface contracts in
-`edge/README.md` and `core/README.md`.
-
-## 6. How to resume
-
-1. Open this repository and read README.md, then this PROJECT_STATUS.md.
+1. Open README.md and this central PROJECT_STATUS.md from main.
 2. Read the current architecture V1 from the TUIAȘI research directory before modifying implementation contracts.
-3. Inspect main and the latest implemented component; continue with five-VM provisioning and integration. The previous GitHub Actions E0 import failure is recorded in Section 2; workflows run manually only.
-4. When new work is completed, update Sections 1, 2, and 5 in the **same commit** as the implementation whenever possible. Record implemented components and test results.
+3. Inspect main for the initial services and `feature/h4-experiment-runner` for the cumulative H1–H4 experimental implementation.
+4. Continue with H1–H4 procedure integration and unit-level regression verification while the five-VM infrastructure is prepared.
+5. Update this central PROJECT_STATUS.md on main after each implementation checkpoint, recording the feature branch, code locations and test results. The previous GitHub Actions E0 import issue and manual workflow dispatch are documented in Section 2.
 

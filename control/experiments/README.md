@@ -99,3 +99,70 @@ The H1 runner's local simulated tests are separate from five-VM end-to-end
 verification. Live-VM execution remains pending until the infrastructure is
 available. The pre-existing core GitHub Actions import failure remains a
 separate CI issue.
+
+
+## H2 — node-local measurement bias
+
+VM-NODES now exposes an operator-restricted, in-memory bias-control interface.
+Use the runner on **VM-CONTROL**; it requires no manual JSON editing or
+restarting the VM-NODES service. The H1 runner and VM-CORE telemetry-ID pinning
+are reused.
+
+From the repository checkout on VM-CONTROL:
+
+```bash
+cd /opt/eacld/control
+python3 experiments/h2_run.py \
+  --episode-id H2-001 \
+  --block-id B01 \
+  --node-id 1 \
+  --mode nominal \
+  --baseline-temperature-mc 22000 \
+  --high-delta-mc 3000 \
+  --bias-temperature-mc 6912 \
+  --humidity-mpct 50000 \
+  --timeout-seconds 120
+```
+
+The selected example starts with the process at 22000 mC, leaves the common
+process unchanged, and changes node 1's signed measurement to 28912 mC. The
+initial temperature-bias and humidity-bias settings for that node must both
+be zero; the runner checks these values instead of silently overwriting an
+unknown configuration.
+
+Execution sequence:
+
+1. Confirm the four control agents and VM-CORE readiness.
+2. Read the current bias of the selected node through
+   `GET /v1/nodes/bias?node_id=1` on 10.60.30.12:8300.
+3. Reset the private process on VM-CONTROL and wait for a new authenticated,
+   fresh baseline telemetry record.
+4. Apply the H2 bias through `POST /v1/nodes/bias`; verify its value and
+   monotonically increased revision via a subsequent readback.
+5. Confirm that the shared process state has not changed.
+6. Wait for authenticated, fresh telemetry containing the biased sensor
+   temperature, and diagnose that exact received message using
+   `expected_telemetry_id`.
+7. Retrieve the persisted VM-CORE diagnostic record and compare its selected
+   telemetry ID and observed fields with those collected before diagnosis.
+8. Save the private H2 intervention record separately on VM-CONTROL; restore
+   and verify the original node bias even when an execution error occurs.
+
+Results are placed under `~/eacld-experiments/H2-001/` on VM-CONTROL,
+including `initial_bias.json`, `baseline_telemetry.json`,
+`bias_activation.json`, `diagnosis_response.json`,
+`core_diagnosis_record.json`, `process_state.json`,
+`private_ground_truth.json`, `bias_restoration.json`, and
+`manifest.json`. Failures leave `failure.json` and the evidence already
+recorded. Do not reuse the same episode identifier.
+
+Focused local runner tests:
+
+```bash
+python3 -m unittest discover -s control/tests -p test_h2_run.py -v
+```
+
+The runner uses the active node's current configuration rather than the
+example population in `nodes/config/nodes.example.json`. The numeric values
+above illustrate a reproducible H2 episode; experimental parameter selection
+remains part of the research design.

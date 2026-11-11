@@ -66,3 +66,41 @@ Run the additional private control tests with:
     PYTHONPATH=edge/services/g2:shared python3 -m unittest discover -s edge/tests -p test_edge_control.py -v
 
 G2/agent roundtrip tests use local Unix sockets; no live VM-EDGE deployment has been verified.
+
+
+## H3 gateway evidence
+
+For controlled H3 experiments, G2 records the exact original and mutated
+94-byte frames when a one-shot mutation is successfully queued for MQTT
+forwarding. The evidence includes a monotonic per-process `event_id`,
+the byte offset, XOR mask and both frame payloads as hexadecimal strings.
+The HMAC bytes are not recalculated.
+
+VM-CONTROL may inspect:
+
+```text
+GET http://10.60.30.14:8300/v1/g2/intervention/status?node_id=1
+```
+
+The response contains `status`, `node_id`, `pending_action`
+(`mutate`, `replay` or `null`) and `last_mutation` (an object or
+`null`). Status requests are authorized only for the VM-CONTROL source,
+unlike the local health check. The corresponding G2 Unix-socket command
+is `{"action":"status","node_id":1}`.
+
+`last_mutation` remains available after the one-shot action is consumed
+or cleared, until another mutation of that node or a G2 service restart.
+Its publication counter indicates a successful *queue request*; reception
+and HMAC verification are confirmed independently from VM-CORE, using
+an exact stored-frame lookup.
+
+The executable operator procedure is in
+`control/experiments/h3_run.py`; its usage and artifact names are
+documented under `control/experiments/README.md`.
+
+Local focused tests:
+
+```bash
+PYTHONPATH=edge/services/g2:shared python3 -m unittest \
+  discover -s edge/tests -p test_h3_mutation_evidence.py -v
+```

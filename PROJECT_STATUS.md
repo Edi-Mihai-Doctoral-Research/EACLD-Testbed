@@ -1,6 +1,6 @@
 # EACLD-Testbed — Project Status and Continuation Log
 
-**Last updated:** 2026-11-10  
+**Last updated:** 2026-11-11  
 **Repository:** eduardmihailescu-creator/EACLD-Testbed  
 **Visibility:** Private  
 **Working branch:** main  
@@ -15,6 +15,7 @@ This file is the **single authoritative implementation checkpoint** for continua
 | Area | Location | Status | Verification |
 | --- | --- | --- | --- |
 | Repository layout | control/, nodes/, reference/, edge/, core/ | Created | Directory layout aligned with architecture V1 |
+| Original E0 computational source | EACLD-E0/ | Imported | 14 original source, configuration, test and documentation files; source archive SHA-256 verified |
 | Shared binary frame and HMAC-SHA256 | shared/eacld_contracts/frame.py | Implemented | 12 local shared-contract tests passed in previous implementation session |
 | MQTT topic and access definitions | shared/eacld_contracts/topics.py | Implemented | Included in shared-contract tests |
 | HTTP / LiveEnvironment contracts | shared/eacld_contracts/interfaces.py | Defined | Included in shared-contract tests |
@@ -49,6 +50,7 @@ This file is the **single authoritative implementation checkpoint** for continua
 7. The existing E0 Bayesian computational core is reused, not rewritten. VM-CORE integrates it through LiveEnvironment.
 8. The V1 technical specification is maintained in Romanian on TUIAȘI Google Drive for the infrastructure implementer; this repository is in English.
 9. Secrets, passwords, per-node HMAC keys, runtime databases, and private ground-truth artifacts are not committed to GitHub. The root .dockerignore also excludes local secrets and runtime files from Docker build contexts.
+10. E0 original source, configurations and test scripts reside in `EACLD-E0/`; the vendored E0 integration in `core/vendor/e0/` retains its current deployment layout.
 
 **Division of work:** Mihai prepares the five VMs, networking, and base software. Repository development covers EACLD application services, integrations, configurations, and automated tests. Deployment on the prepared VMs and end-to-end verification are joint integration activities.
 
@@ -81,6 +83,7 @@ Consult the TUIAȘI research project documentation and the Google Drive document
 | 2026-11-10 | Initial eacld-g2 MQTT forwarding, one-shot header mutation/replay primitives, dedicated Compose service and 19 local tests; live-broker and control integration pending | 72566a55 |
 | 2026-11-10 | VM-EDGE edge-control agent, G2 Unix control channel, 8 tests, Compose and documentation committed; VM integration pending | Current main work sequence |
 | 2026-11-10 | VM-CORE telemetry, replay registry, PostgreSQL, preserved Bayesian E0 vendor artifact, LiveEnvironment, 9 new tests and service Compose committed | This commit on main |
+| 2026-11-11 | Imported original E0 computational source, configurations, tests and documentation under EACLD-E0/ | E0 source import commit |
 
 ## 6. How to resume
 

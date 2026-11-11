@@ -8,6 +8,10 @@ This repository contains the initial implementation structure defined in the EAC
 
 **[PROJECT_STATUS.md](PROJECT_STATUS.md)** is the authoritative implementation status and continuation log. It records completed work, verification, the exact next component, source documents, and decisions needed to resume work in a new session. Update it whenever the implementation progresses.
 
+## Computational experiment E0
+
+The original E0 computational source is maintained in [`EACLD-E0/`](EACLD-E0/): Bayesian engine, simulator, evaluation, experiment runner, report generator, configurations, and tests. These source files are copied without modification from `EACLD_E0_Experiment_2026_11_04.zip` (SHA-256: `0c495ac36ef06c5654673a6996d6478953750dd0eb414ba45eede0e1c3404454`). The full research archive, with generated data, results and figures, is maintained on the TUIAȘI Google Drive in `03 Experimente și rezultate`. The existing `core/vendor/e0/` integration is unchanged.
+
 ## Virtual machine allocation
 
 | Virtual machine | Repository directory | Services |

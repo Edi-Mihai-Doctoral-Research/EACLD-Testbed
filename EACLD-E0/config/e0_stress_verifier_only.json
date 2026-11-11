@@ -1,0 +1,119 @@
+{
+  "experiment_id": "EACLD-E0-SINGLE-FACTOR-VERIFIER-PREVALENCE",
+  "seed": 20261104,
+  "hypotheses": [
+    "H1",
+    "H2",
+    "H3",
+    "H4"
+  ],
+  "modes": [
+    "nominal",
+    "degraded"
+  ],
+  "blocks_per_mode": {
+    "train": 80,
+    "validation": 20,
+    "test": 20
+  },
+  "simulation": {
+    "prior_bad_verifier": {
+      "nominal": 0.24,
+      "degraded": 0.45
+    },
+    "passive_coverage_mac": {
+      "nominal": 0.3,
+      "degraded": 0.16
+    },
+    "passive_coverage_seq": {
+      "nominal": 0.28,
+      "degraded": 0.15
+    },
+    "reference_correct": {
+      "nominal": 0.97,
+      "degraded": 0.94
+    },
+    "reference_unavailable": {
+      "nominal": 0.025,
+      "degraded": 0.08
+    },
+    "node_correct": {
+      "nominal": 0.98,
+      "degraded": 0.945
+    },
+    "node_unavailable": {
+      "nominal": 0.035,
+      "degraded": 0.105
+    },
+    "security_good_correct": {
+      "nominal": 0.995,
+      "degraded": 0.985
+    },
+    "security_bad_true_negative_detection": {
+      "nominal": 0.13,
+      "degraded": 0.1
+    },
+    "security_bad_true_positive_detection": {
+      "nominal": 0.955,
+      "degraded": 0.925
+    },
+    "security_unavailable_good": {
+      "nominal": 0.018,
+      "degraded": 0.09
+    },
+    "security_unavailable_bad": {
+      "nominal": 0.07,
+      "degraded": 0.215
+    }
+  },
+  "actions": {
+    "reference_read": {
+      "cost": 0.05,
+      "latency_ms": {
+        "nominal": 120,
+        "degraded": 210
+      },
+      "bytes": 180
+    },
+    "node_challenge": {
+      "cost": 0.064,
+      "latency_ms": {
+        "nominal": 85,
+        "degraded": 180
+      },
+      "bytes": 230
+    },
+    "message_verify": {
+      "cost": 0.017,
+      "latency_ms": {
+        "nominal": 7,
+        "degraded": 14
+      },
+      "bytes": 48
+    },
+    "sequence_check": {
+      "cost": 0.015,
+      "latency_ms": {
+        "nominal": 6,
+        "degraded": 12
+      },
+      "bytes": 48
+    }
+  },
+  "decision": {
+    "unresolved_loss": 0.46,
+    "class_correct_loss": 0.22,
+    "class_incorrect_loss": 1.65,
+    "wrong_label_loss": 1.0,
+    "missed_attack_loss": 2.4,
+    "false_attack_loss": 1.5,
+    "risk_target": 0.07,
+    "max_cost": 0.205
+  },
+  "calibration": {
+    "dirichlet_alpha": 0.4,
+    "prior_beta_alpha": 1.0,
+    "prior_beta_beta": 1.0
+  },
+  "bootstrap_replicates": 1500
+}

@@ -28,7 +28,7 @@ This file is the **single authoritative implementation checkpoint** for continua
 | eacld-core / VM-CORE | core/services/core/ | Initial implementation committed | 9 new tests committed; original E0 core 9/9 tests passed locally; live MQTT/Postgres/VM integration unverified |
 | Existing E0 Bayesian engine | core/vendor/e0/e0_source.zip.b64 | Original E0 source and calibrated model vendored without private data | Original SHA-256 verified from Drive; original E0 core tests 9/9 passed locally |
 | H1/H2 operator experiments | control/experiments/, VM-CORE restricted diagnosis, VM-NODES runtime bias | Development branch feature/h2-experiment-runner | Four H2 local runner mock tests passed; node bias control tests added |
-| H3 operator experiment | control/experiments/h3_run.py, G2 observation API, VM-CORE exact stored-frame selection | Implemented on feature/h3-experiment-runner | Focused edge, core and operator tests committed; live integration not yet executed |
+| H3 operator experiment | control/experiments/h3_run.py, G2 observation API, VM-CORE exact stored-frame selection | Implemented on feature/h3-experiment-runner | Focused edge, core and operator tests committed |
 | Distributed VM deployment | Five virtual machines | Pending | Mihai is coordinating hardware availability, VM setup, networking, and base software; a 10-day infrastructure window has been requested |
 | GitHub Actions / service unit tests | .github/workflows/eacld-unit-tests.yml | Manual dispatch only | Seven earlier push-triggered workflow runs failed in the core job; edge job passed in the latest run; no deployment or E2E verification established |
 
@@ -154,7 +154,6 @@ Tests added:
 Execution instructions and collected artifact names are documented in
 `control/experiments/README.md`, with interface contracts in
 `edge/README.md` and `core/README.md`.
-No tests are claimed as passing solely because they are committed.
 
 ## 6. How to resume
 

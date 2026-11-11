@@ -4,11 +4,13 @@
 **Repository:** Edi-Mihai-Doctoral-Research/EACLD-Testbed  
 **Visibility:** Private  
 **Working branch:** main  
-**Last completed implementation checkpoint:** This commit on main (inspect Git HEAD for its SHA)  
-**Current phase:** All seven initial application service implementations committed; infrastructure allocation and distributed deployment pending  
-**Next task:** Mihai to identify temporary hardware resources for a 10-day testbed window, prepare five VMs, deploy the services, and begin end-to-end integration
+**Main implementation checkpoint:** Seven initial application services committed on main; H1–H3 experiment code developed separately  
+**Latest experimental branch:** feature/h3-experiment-runner (includes H1 and H2 implementation history)  
+**Current phase:** H1, H2 and H3 operator implementations committed on feature branches; five-VM provisioning and integration preparation ongoing  
+**Next software task:** Implement H4 replay experiment, continuing from feature/h3-experiment-runner  
+**Next infrastructure task:** Mihai to identify temporary hardware resources for a 10-day testbed window, prepare five VMs, deploy the services, and begin end-to-end integration
 
-This file is the **single authoritative implementation checkpoint** for continuation across collaborators and ChatGPT sessions. README.md is the repository entry point; this document holds the current status and chronological work log. The executable source on main is authoritative for implemented code; the V1 architecture document is authoritative for technical requirements.
+This file is the **single authoritative implementation checkpoint** for continuation across collaborators and ChatGPT sessions. README.md is the repository entry point; this document holds the current status and chronological work log. The source on each referenced Git branch defines that branch's implementation; main retains the initial service implementation. The V1 architecture document is authoritative for technical requirements.
 
 ## 1. Current implementation status
 
@@ -27,6 +29,9 @@ This file is the **single authoritative implementation checkpoint** for continua
 | eacld-edge-control / VM-EDGE | edge/services/edge-control/ | Initial implementation committed | 8 unit/API tests committed; local socket + HTTP integration and live-VM operation not independently verified |
 | eacld-core / VM-CORE | core/services/core/ | Initial implementation committed | 9 new tests committed; original E0 core 9/9 tests passed locally; live MQTT/Postgres/VM integration unverified |
 | Existing E0 Bayesian engine | core/vendor/e0/e0_source.zip.b64 | Original E0 source and calibrated model vendored without private data | Original SHA-256 verified from Drive; original E0 core tests 9/9 passed locally |
+| H1 — process intervention | control/experiments/h1_run.py; restricted VM-CORE telemetry/diagnosis API | Committed on feature/h1-experiment-runner; inherited by H2/H3 branches | Operator and API unit tests added; baseline, injected state and selected diagnostic frame recorded |
+| H2 — virtual sensor measurement bias | nodes/services/nodes/src/nodes.py; control/experiments/h2_run.py | Committed on feature/h2-experiment-runner; inherited by H3 branch | Four local runner tests recorded as passed; bias API tests and automatic restoration implemented |
+| H3 — G2 telemetry mutation | edge/services/g2/src/g2.py; edge/services/edge-control/src/agent.py; control/experiments/h3_run.py; VM-CORE frame selection | Committed on feature/h3-experiment-runner | Tests added for G2 mutation evidence, exact VM-CORE frame selection and operator cleanup |
 | Distributed VM deployment | Five virtual machines | Pending | Mihai is coordinating hardware availability, VM setup, networking, and base software; a 10-day infrastructure window has been requested |
 | GitHub Actions / service unit tests | .github/workflows/eacld-unit-tests.yml | Manual dispatch only | Seven earlier push-triggered workflow runs failed in the core job; edge job passed in the latest run; no deployment or E2E verification established |
 
@@ -91,11 +96,26 @@ Consult the TUIAȘI research project documentation and the Google Drive document
 | 2026-11-11 | Disabled automatic GitHub Actions push triggers; retained manual execution only | 19dd01f7 |
 | 2026-11-11 | Transferred both repositories to Edi-Mihai-Doctoral-Research and restored GitHub connector access | Organization transfer |
 | 2026-11-11 | Sent Mihai the EACLD-Testbed handoff and technical-documentation folder; requested hardware availability for 10 days | Coordination by email |
+| 2026-11-11 | Added H1 experiment runner, baseline and intervention capture, telemetry-ID guard, persistent diagnosis observation and local tests | feature/h1-experiment-runner |
+| 2026-11-11 | Added H2 runtime node-local bias API, one-command experiment runner, evidence capture, automatic restoration and tests | feature/h2-experiment-runner |
+| 2026-11-11 | Added H3 G2 original/mutated frame evidence, restricted agent status, VM-CORE exact-frame diagnosis, experiment runner, cleanup and tests | feature/h3-experiment-runner |
+| 2026-11-11 | Synchronized central PROJECT_STATUS.md on main with H1–H3 feature-branch progress; code remains on feature branches | main |
 
-## 6. How to resume
+## 6. Experimental implementation history (H1–H3)
 
-1. Open this repository and read README.md, then this PROJECT_STATUS.md.
+**H1 — process intervention.** The `feature/h1-experiment-runner` branch adds `control/experiments/h1_run.py`, restricted VM-CORE evidence retrieval and an optional `expected_telemetry_id` guard for diagnosis of the latest authenticated telemetry. The operator procedure initializes the common process, schedules a process-level H1 intervention, records the resulting observations and saves the diagnostic decision alongside private intervention evidence held on VM-CONTROL. Tests and instructions are in `control/tests/`, `core/tests/` and `control/experiments/README.md`.
+
+**H2 — sensor measurement bias.** The `feature/h2-experiment-runner` branch derives from H1. VM-NODES accepts VM-CONTROL-restricted, in-memory bias changes per selected node. `control/experiments/h2_run.py` applies the bias, checks the unchanged common process, diagnoses the selected authenticated measurement, records the evidence and restores the original bias. Tests are in `nodes/tests/test_bias_control.py` and `control/tests/test_h2_run.py`.
+
+**H3 — gateway telemetry mutation.** The `feature/h3-experiment-runner` branch derives from H2 and therefore contains H1 and H2 development work. G2 records the original and XOR-modified 94-byte frames for a one-shot header mutation while preserving the original HMAC. VM-CORE supports exact payload lookup and diagnosis of a selected persisted telemetry ID, including after newer MQTT messages arrive. `control/experiments/h3_run.py` collects G2 and VM-CORE evidence and clears the intervention. Focused tests are in `edge/tests/test_h3_mutation_evidence.py`, `core/tests/test_h3_core_selection.py` and `control/tests/test_h3_run.py`.
+
+The H1–H3 experiment code and associated READMEs remain on their development branches. This status update changes `PROJECT_STATUS.md` on `main` only.
+
+## 7. How to resume
+
+1. Open README.md and this central PROJECT_STATUS.md from main.
 2. Read the current architecture V1 from the TUIAȘI research directory before modifying implementation contracts.
-3. Inspect main and the latest implemented component; continue with five-VM provisioning and integration. The previous GitHub Actions E0 import failure is recorded in Section 2; workflows run manually only.
-4. When new work is completed, update Sections 1, 2, and 5 in the **same commit** as the implementation whenever possible. Record implemented components and test results.
+3. Inspect main for the initial services and `feature/h3-experiment-runner` for the cumulative H1–H3 operator implementation.
+4. Continue software implementation with H4 and infrastructure preparation with the five-VM deployment, according to the established division of work.
+5. Update this central PROJECT_STATUS.md on main after each implementation checkpoint, recording the feature branch, code locations and test results. The previous GitHub Actions E0 import issue and manual workflow dispatch are documented in Section 2.
 

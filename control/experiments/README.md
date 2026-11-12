@@ -97,8 +97,10 @@ core tests.
 
 The H1 runner's local simulated tests are separate from five-VM end-to-end
 verification. Live-VM execution remains pending until the infrastructure is
-available. The pre-existing core GitHub Actions import failure remains a
-separate CI issue.
+available. The original E0 `eacld/simulator.py` was restored to the vendor
+archive on 2026-11-12 (`main`: `333bb956`; H4 branch: `841c96b`). The
+H1–H4 regression script now extracts that archive and uses the correct
+VM-CORE import path (`4629c76`).
 
 
 ## H2 — node-local measurement bias
@@ -238,7 +240,8 @@ PYTHONPATH=edge/services/g2:shared python3 -m unittest \
 VM-CORE tests, in its configured test environment:
 
 ```bash
-PYTHONPATH=core/services/core:core/vendor/e0:shared python3 -m unittest \
+python3 -c "import base64,io,pathlib,zipfile; p=pathlib.Path('core/vendor/e0/e0_source.zip.b64'); z=zipfile.ZipFile(io.BytesIO(base64.b64decode(p.read_text()))); assert z.testzip() is None; z.extractall('core/vendor/e0')"
+PYTHONPATH=core/services/core:core/vendor/e0/EACLD_E0_Experimental_Package:shared python3 -m unittest \
   discover -s core/tests -p test_h3_core_selection.py -v
 ```
 
@@ -310,7 +313,8 @@ Run focused regression tests from the repository root:
 python3 -m unittest discover -s control/tests -p test_h4_run.py -v
 PYTHONPATH=edge/services/g2:shared python3 -m unittest \
   discover -s edge/tests -p test_h4_replay_evidence.py -v
-PYTHONPATH=core/services/core:core/vendor/e0:shared python3 -m unittest \
+python3 -c "import base64,io,pathlib,zipfile; p=pathlib.Path('core/vendor/e0/e0_source.zip.b64'); z=zipfile.ZipFile(io.BytesIO(base64.b64decode(p.read_text()))); assert z.testzip() is None; z.extractall('core/vendor/e0')"
+PYTHONPATH=core/services/core:core/vendor/e0/EACLD_E0_Experimental_Package:shared python3 -m unittest \
   discover -s core/tests -p test_h4_replay_selection.py -v
 ```
 
@@ -332,5 +336,7 @@ bash control/experiments/verify_h1_h4.sh
 ```
 
 Run the verification script from a checkout with the service-level Python
-dependencies installed. It covers local contracts; distributed execution is
-performed separately through the four operator commands above.
+dependencies installed. The script extracts `core/vendor/e0/e0_source.zip.b64`
+and sets `PYTHONPATH` to `core/vendor/e0/EACLD_E0_Experimental_Package`
+for the VM-CORE tests. Distributed experiment episodes are executed through
+the four operator commands above.

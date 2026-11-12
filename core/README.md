@@ -10,7 +10,7 @@ VM-CORE implements authenticated MQTT ingestion, persistent anti-replay checking
 - runner.py loads the unchanged E0 PolicyEngine, configuration and fitted model. Policy B6_EACLD selects actual checks, not synthetic outcomes. Returned latency is elapsed wall-clock time, bytes represent observed application payload sizes, and costs are the configured nominal E0 costs.
 - core.py provides the source-restricted NET-CONTROL interface on 10.60.30.15:8300. Neither private cause labels nor intervention schedules are exposed to the core.
 
-The curated source archive vendor/e0/e0_source.zip.b64 contains byte-identical original E0 core.py, its Python package marker, configuration, fitted model and core tests. It does not include private ground truth or synthetic potential-outcome datasets. The Docker build verifies original core.py SHA-256: cedddf154553162a4bda1e12fc48045162af0918ffd975a001141ae2e4f05f58. The full original ZIP stored on TUIAȘI Drive has SHA-256: 0c495ac36ef06c5654673a6996d6478953750dd0eb414ba45eede0e1c3404454.
+The curated source archive `vendor/e0/e0_source.zip.b64` contains six original E0 files under `EACLD_E0_Experimental_Package/`: `eacld/__init__.py`, `eacld/core.py`, `eacld/simulator.py`, `config/e0_config.json`, `results/fitted_model.json`, and `tests/test_core.py`. The original `eacld/simulator.py` was restored from `EACLD-Mathematical-Model` on 2026-11-12 (main: `333bb956`; `feature/h4-experiment-runner`: `841c96b`), correcting the earlier missing-module error in E0 test collection. The original E0 Bayesian engine `eacld/core.py` remains unchanged. The archive does not include private ground truth or synthetic potential-outcome datasets. The Docker build verifies original `core.py` SHA-256: `cedddf154553162a4bda1e12fc48045162af0918ffd975a001141ae2e4f05f58`. The full original ZIP stored on TUIAȘI Drive has SHA-256: `0c495ac36ef06c5654673a6996d6478953750dd0eb414ba45eede0e1c3404454`.
 
 ## Explicit diagnosis API
 
@@ -53,7 +53,7 @@ VM-CORE has NET-DATA 10.60.10.15, NET-PROBE 10.60.20.15 and NET-CONTROL 10.60.30
 
 ## Verification
 
-core/tests/test_core_service.py contains unit and API tests for HMAC, keyring, topic validation, direct probes, nonce validation, E0 inference integration, MQTT callback handling and source-restricted control. The original nine E0 mathematical core tests are also retained. The main-branch GitHub workflow contains both suites.
+core/tests/test_core_service.py contains unit and API tests for HMAC, keyring, topic validation, direct probes, nonce validation, E0 inference integration, MQTT callback handling and source-restricted control. The original nine E0 mathematical core tests are also retained. The main-branch GitHub workflow contains both suites. It restores the E0 archive and imports the package through `core/vendor/e0/EACLD_E0_Experimental_Package`. The earlier CI `ModuleNotFoundError: No module named 'eacld.simulator'` was caused by the omitted archived module and was addressed by the 2026-11-12 source-package update. GitHub Actions remains manually triggered. The consolidated H1–H4 verification script on `feature/h4-experiment-runner` now extracts the same archive and uses the same package path (`4629c76`).
 
 These tests do not establish deployment against live Mosquitto, PostgreSQL, Docker or the five-VM topology.
 

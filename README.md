@@ -2,7 +2,7 @@
 
 Evidence-Adaptive Cross-Layer Diagnosis (EACLD) — Distributed Experimental Testbed.
 
-This repository contains the initial implementation structure defined in the EACLD experimental testbed technical architecture specification (V1), maintained in the TUIAȘI research directory.
+This repository implements the EACLD distributed experimental testbed defined in technical architecture V1, maintained in the TUIAȘI research directory. The initial services are on `main`; the cumulative H1–H4 experimental operators and regression tests are on `feature/h4-experiment-runner`.
 
 ## Project status and continuation
 
@@ -10,7 +10,13 @@ This repository contains the initial implementation structure defined in the EAC
 
 ## Computational experiment E0
 
-The original E0 mathematical and computational source is maintained in the separate private repository [EACLD-Mathematical-Model](https://github.com/eduardmihailescu-creator/EACLD-Mathematical-Model). It contains the Bayesian engine, simulator, evaluation scripts, experiment configurations and tests, matching the source in `EACLD_E0_Experiment_2026_11_04.zip` (SHA-256: `0c495ac36ef06c5654673a6996d6478953750dd0eb414ba45eede0e1c3404454`). The full research archive, including generated data, results and figures, is maintained on the TUIAȘI Google Drive in `03 Experimente și rezultate`. This testbed reuses the E0 inference engine through the existing `core/vendor/e0/` integration.
+The original E0 mathematical and computational source is maintained in the separate private repository [EACLD-Mathematical-Model](https://github.com/Edi-Mihai-Doctoral-Research/EACLD-Mathematical-Model). It contains the Bayesian engine, simulator, evaluation scripts, experiment configurations and tests, matching the source in `EACLD_E0_Experiment_2026_11_04.zip` (SHA-256: `0c495ac36ef06c5654673a6996d6478953750dd0eb414ba45eede0e1c3404454`). The full research archive, including generated data, results and figures, is maintained on the TUIAȘI Google Drive in `03 Experimente și rezultate`. This testbed reuses the E0 inference engine through the existing `core/vendor/e0/` integration.
+
+### E0 source archive and import repair (2026-11-12)
+
+The vendored archive `core/vendor/e0/e0_source.zip.b64` contains the original `EACLD_E0_Experimental_Package/eacld/simulator.py`, `eacld/core.py`, `eacld/__init__.py`, `config/e0_config.json`, `results/fitted_model.json`, and `tests/test_core.py`. On 12 November 2026, the original `simulator.py` was restored from `EACLD-Mathematical-Model`, correcting the missing module that caused `ModuleNotFoundError: No module named 'eacld.simulator'` during earlier GitHub Actions test collection. The existing E0 Bayesian engine `eacld/core.py` was not modified.
+
+The archive was updated on `main` (commit `333bb956`) and `feature/h4-experiment-runner` (commit `841c96b`). On the H4 branch, `control/experiments/verify_h1_h4.sh` now extracts the archive and uses `core/vendor/e0/EACLD_E0_Experimental_Package` in `PYTHONPATH` for VM-CORE regression tests (commit `4629c76`). GitHub Actions still uses manual `workflow_dispatch`; it has not been run following these changes.
 
 ## Virtual machine allocation
 
@@ -30,9 +36,9 @@ Each virtual machine has a separate Docker Compose project deployed under `/opt/
 - `nodes/compose.yaml`, `nodes/services/nodes/{Dockerfile,requirements.txt,src/}`
 - `reference/compose.yaml`, `reference/services/reference/{Dockerfile,requirements.txt,src/}`
 - `edge/compose.yaml`, `edge/services/{g1,g2,edge-control}/{Dockerfile,requirements.txt,src/}`, `edge/config/{mosquitto.conf,acl,passwd}`, `edge/volumes/mosquitto/`
-- `core/compose.yaml`, `core/services/core/{Dockerfile,requirements.txt,src/}`, `core/vendor/e0/{eacld/core.py,config/e0_config.json,results/fitted_model.json}`, `core/secrets/pg_password`, `core/volumes/postgres/`
+- `core/compose.yaml`, `core/services/core/{Dockerfile,requirements.txt,src/}`, `core/vendor/e0/e0_source.zip.b64`, `core/secrets/pg_password`, `core/volumes/postgres/`
 
-These paths describe the planned deployment structure. Application source files, Docker configurations, and runtime configuration files will be added during implementation. Empty directories are currently represented by `.gitkeep` files.
+Application source and Docker configurations are tracked in the repository. The E0 archive is extracted when building the VM-CORE container. VM-specific secrets and runtime volumes are provisioned for deployment.
 
 ## Communication networks
 

@@ -6,7 +6,7 @@
 **Central status branch:** main  
 **Main implementation checkpoint:** Seven initial application services committed on main; H1–H4 experiment code developed separately  
 **Latest experimental branch:** feature/h4-experiment-runner (includes H1–H3 implementation history)  
-**Current phase:** H1–H4 operator implementations committed on feature branches; unit-level consolidation and five-VM integration remain to be completed  
+**Current phase:** H1–H4 operator implementations committed; E0 missing-module import corrected on `main` and `feature/h4-experiment-runner`; consolidated regression script corrected for execution  
 **Next software task:** Execute the consolidated H1–H4 regression suite and resolve any identified integration defects  
 **Next infrastructure task:** Mihai to identify temporary hardware resources for a 10-day testbed window, prepare five VMs, deploy the services, and begin end-to-end integration
 
@@ -28,14 +28,14 @@ This file is the **single authoritative implementation checkpoint** for continua
 | eacld-g2 / VM-EDGE | edge/services/g2/ | Initial implementation committed | 19 local unit/configuration tests passed on Python 3; MQTT tested with a fake client, live broker pending |
 | eacld-edge-control / VM-EDGE | edge/services/edge-control/ | Initial implementation committed | 8 unit/API tests committed; local socket + HTTP integration and live-VM operation not independently verified |
 | eacld-core / VM-CORE | core/services/core/ | Initial implementation committed | 9 new tests committed; original E0 core 9/9 tests passed locally; live MQTT/Postgres/VM integration unverified |
-| Existing E0 Bayesian engine | core/vendor/e0/e0_source.zip.b64 | Original E0 source and calibrated model vendored without private data | Original SHA-256 verified from Drive; original E0 core tests 9/9 passed locally |
+| Existing E0 Bayesian engine | core/vendor/e0/e0_source.zip.b64 | Original E0 source package updated with `eacld/simulator.py`; Bayesian `eacld/core.py` unchanged | Missing E0 simulator module restored in both branches on 2026-11-12 (`333bb956`, `841c96b`); previous E0 core tests 9/9 passed locally |
 | H1 — process intervention | control/experiments/h1_run.py; restricted VM-CORE telemetry/diagnosis API | Committed on feature/h1-experiment-runner; inherited by H2/H3 branches | Operator and API unit tests added; baseline, injected state and selected diagnostic frame recorded |
 | H2 — virtual sensor measurement bias | nodes/services/nodes/src/nodes.py; control/experiments/h2_run.py | Committed on feature/h2-experiment-runner; inherited by H3 branch | Four local runner tests recorded as passed; bias API tests and automatic restoration implemented |
 | H3 — G2 telemetry mutation | edge/services/g2/src/g2.py; edge/services/edge-control/src/agent.py; control/experiments/h3_run.py; VM-CORE frame selection | Committed on feature/h3-experiment-runner | Tests added for G2 mutation evidence, exact VM-CORE frame selection and operator cleanup |
 | H4 — authentic telemetry replay | edge/services/g2/src/g2.py; edge/services/edge-control/src/agent.py; control/experiments/h4_run.py; VM-CORE sequence registry and exact record selection | Committed on feature/h4-experiment-runner | Tests added for bounded frame capture, authentic stale replay, exact selected diagnosis and cleanup |
-| H1–H4 compatibility | control/tests/test_experiment_compatibility.py; control/experiments/verify_h1_h4.sh | Committed on feature/h4-experiment-runner | Shared operator CLI contracts checked by new tests; combined component regression script added |
+| H1–H4 compatibility | control/tests/test_experiment_compatibility.py; control/experiments/verify_h1_h4.sh | Committed on feature/h4-experiment-runner | Consolidated runner now extracts E0 archive and uses correct VM-CORE `PYTHONPATH` (`4629c76`); next action: execute regression suite |
 | Distributed VM deployment | Five virtual machines | Pending | Mihai is coordinating hardware availability, VM setup, networking, and base software; a 10-day infrastructure window has been requested |
-| GitHub Actions / service unit tests | .github/workflows/eacld-unit-tests.yml | Manual dispatch only | Seven earlier push-triggered workflow runs failed in the core job; edge job passed in the latest run; no deployment or E2E verification established |
+| GitHub Actions / service unit tests | .github/workflows/eacld-unit-tests.yml | Manual `workflow_dispatch` | Earlier VM-CORE test collection failed because `eacld/simulator.py` was missing from the vendored archive; the source-package defect was corrected on both branches on 2026-11-12; no post-fix run launched |
 
 
 ## 2. Completion of the two authorized service implementations
@@ -44,7 +44,7 @@ This file is the **single authoritative implementation checkpoint** for continua
 
 **eacld-core / VM-CORE: initial implementation committed.** Core subscribes only to accepted/+ using the core MQTT principal, parses the original 94-byte frame contract, validates HMAC against VM-CORE-only node keys and persists anti-replay state and received telemetry in internal PostgreSQL 16. The private E0 computational source, fitted model and configuration were selectively copied from the verified Drive archive into a compact reproducible source package without any private ground-truth datasets. E0 eacld/core.py is unmodified and loaded by the container at build time. The LiveEnvironment adapter executes four available physical/security probes and returns only observed results and nominal configured costs. The explicit diagnosis endpoint on VM-CORE NET-CONTROL requires operator-provided mode, episode identifiers, baseline and threshold.
 
-**Verification status:** Original E0 mathematical core tests: 9 passed locally. New tests for edge-control and core services: 8 and 9 committed, respectively. Seven GitHub Actions runs triggered by pushes on 10–11 November 2026 failed in the VM-CORE job: `ModuleNotFoundError: No module named 'eacld.simulator'` during E0 test collection; the latest VM-EDGE job passed. The workflow was changed to `workflow_dispatch` (manual execution only) in commit `19dd01f7`; the import error remains unresolved. Integration testing pending: live Mosquitto, PostgreSQL, Ubuntu/Docker, five-VM connectivity and end-to-end execution. Runtime secrets and private experimental labels are excluded from GitHub.
+**Verification status:** Original E0 mathematical core tests: 9 passed locally. New tests for edge-control and core services: 8 and 9 committed, respectively. Seven GitHub Actions runs triggered by pushes on 10–11 November 2026 failed in the VM-CORE job: `ModuleNotFoundError: No module named 'eacld.simulator'` during E0 test collection; the latest VM-EDGE job passed. The vendored E0 package was repaired on 2026-11-12 by restoring the original `eacld/simulator.py` to `core/vendor/e0/e0_source.zip.b64` on `main` (`333bb956`) and `feature/h4-experiment-runner` (`841c96b`). The consolidated H1–H4 regression script now extracts the package and sets the correct VM-CORE import path (`4629c76`). The GitHub Actions workflow remains manually triggered through `workflow_dispatch`; no post-fix run has been launched. Integration testing pending: live Mosquitto, PostgreSQL, Ubuntu/Docker, five-VM connectivity and end-to-end execution. Runtime secrets and private experimental labels are excluded from GitHub.
 
 
 ## 3. Implementation and repository decisions
@@ -109,6 +109,8 @@ TUIAȘI Google Drive → same shared testbed folder as architecture V1 → "EACL
 | 2026-11-11 | Synchronized central PROJECT_STATUS.md on main with H4 and next integration checkpoint | main |
 | 2026-11-11 | Added H1–H4 common CLI compatibility tests and consolidated local regression command; locally reran historical H1 and H2 operator test snapshots (3/3 and 4/4) | feature/h4-experiment-runner |
 | 2026-11-12 | Updated the TUIAȘI shared experimental execution and validation protocol for the implemented H1–H4 runners, exact telemetry selection, commands, evidence and cleanup; exported an eight-page Word copy to the same shared testbed folder | TUIAȘI Drive: experimental protocol and EACLD - Protocolul de executie a experimentelor H1-H4 - 2026-11-12.docx |
+| 2026-11-12 | Restored original E0 `eacld/simulator.py` to the vendored archive in both branches, correcting the source-package import defect without changing the Bayesian engine | main `333bb956`; feature/h4-experiment-runner `841c96b` |
+| 2026-11-12 | Corrected consolidated H1–H4 regression runner to extract the E0 archive and set the VM-CORE Python package path | feature/h4-experiment-runner `4629c76` |
 
 ## 6. Experimental implementation history (H1–H3)
 
@@ -128,5 +130,5 @@ The H1–H4 experiment code and associated READMEs reside in the feature-branch 
 2. Read the current architecture V1 from the TUIAȘI research directory before modifying implementation contracts.
 3. Inspect main for the initial services and `feature/h4-experiment-runner` for the cumulative H1–H4 experimental implementation.
 4. Continue with H1–H4 procedure integration and unit-level regression verification while the five-VM infrastructure is prepared.
-5. Update this central PROJECT_STATUS.md on main after each implementation checkpoint, recording the feature branch, code locations and test results. The previous GitHub Actions E0 import issue and manual workflow dispatch are documented in Section 2.
+5. Update this central PROJECT_STATUS.md on main after each implementation checkpoint, recording the feature branch, code locations and test results. The corrected E0 source archive and manual GitHub Actions workflow are documented in Section 2.
 

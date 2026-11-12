@@ -1,6 +1,6 @@
 # EACLD-Testbed — Project Status and Continuation Log
 
-**Last updated:** 2026-11-11  
+**Last updated:** 2026-11-12  
 **Repository:** Edi-Mihai-Doctoral-Research/EACLD-Testbed  
 **Visibility:** Private  
 **Central status branch:** main  
@@ -74,6 +74,9 @@ TUIAȘI Google Drive → PhD TUIASI → 3 Activitatea de publicare → 04 Activi
 **Research continuity and collaboration protocol:**  
 Consult the TUIAȘI research project documentation and the Google Drive document "README - MDPI Information - Orientare și continuitate". Follow the approved architecture and document formatting. Record implementation, proposals and verification results distinctly.
 
+**Distributed H1–H4 execution protocol (updated 12 November 2026):**  
+TUIAȘI Google Drive → same shared testbed folder as architecture V1 → "EACLD – Protocolul de execuție a experimentelor și validare a rezultatelor" (native Google Doc, edited in place). A verified Word export is stored alongside it as "EACLD - Protocolul de executie a experimentelor H1-H4 - 2026-11-12.docx". Section 3.2 contains executable commands, exact H1–H4 input selection and evidence/artifact checks. The active source branch for those commands is `feature/h4-experiment-runner`.
+
 **Existing E0 computational artifact:**  
 "EACLD_E0_Experiment_2026_11_04.zip"; the existing E0 Bayesian core has already been incorporated into VM-CORE under `core/vendor/e0/`. The original computational source is maintained in the separate `EACLD-Mathematical-Model` repository.
 
@@ -105,6 +108,7 @@ Consult the TUIAȘI research project documentation and the Google Drive document
 | 2026-11-11 | Implemented H4 exact prior-frame replay, G2 wire evidence, operator runner, VM-CORE stale-frame selection and focused tests; updated experiment and service READMEs | feature/h4-experiment-runner |
 | 2026-11-11 | Synchronized central PROJECT_STATUS.md on main with H4 and next integration checkpoint | main |
 | 2026-11-11 | Added H1–H4 common CLI compatibility tests and consolidated local regression command; locally reran historical H1 and H2 operator test snapshots (3/3 and 4/4) | feature/h4-experiment-runner |
+| 2026-11-12 | Updated the TUIAȘI shared experimental execution and validation protocol for the implemented H1–H4 runners, exact telemetry selection, commands, evidence and cleanup; exported an eight-page Word copy to the same shared testbed folder | TUIAȘI Drive: experimental protocol and EACLD - Protocolul de executie a experimentelor H1-H4 - 2026-11-12.docx |
 
 ## 6. Experimental implementation history (H1–H3)
 

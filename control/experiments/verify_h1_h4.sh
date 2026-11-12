@@ -21,7 +21,9 @@ for pattern in test_g2.py test_edge_control.py test_h3_mutation_evidence.py test
 done
 
 printf '%s\n' '[4/4] VM-CORE exact telemetry and diagnostic selection'
+"$PYTHON" -c "import base64,io,pathlib,zipfile; p=pathlib.Path('core/vendor/e0/e0_source.zip.b64'); z=zipfile.ZipFile(io.BytesIO(base64.b64decode(p.read_text()))); assert z.testzip() is None; z.extractall('core/vendor/e0')"
+
 for pattern in test_experiment_api.py test_operator_api.py test_h3_core_selection.py test_h4_replay_selection.py; do
-  PYTHONPATH="core/services/core:core/vendor/e0:shared${PYTHONPATH:+:$PYTHONPATH}" \
+  PYTHONPATH="core/services/core:core/vendor/e0/EACLD_E0_Experimental_Package:shared${PYTHONPATH:+:$PYTHONPATH}" \
     "$PYTHON" -m unittest discover -s core/tests -p "$pattern" -v
 done

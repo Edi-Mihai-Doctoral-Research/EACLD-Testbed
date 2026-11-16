@@ -2,21 +2,21 @@
 
 Evidence-Adaptive Cross-Layer Diagnosis (EACLD) — Distributed Experimental Testbed.
 
-This public repository contains the EACLD distributed experimental testbed. The initial seven application services are available on `main`; the complete H1–H4 experimental operators and regression tests are on `feature/h4-experiment-runner` (experimental commit `68a75fff317318296f3ada7b7e20d193f5bd04db`). The deployed testbed runs on five Ubuntu Server 26.04 LTS virtual machines using Proxmox VE 9.2.2.
+The repository provides the seven EACLD application services on `main` and the H1–H4 experimental operators and regression tests on `feature/h4-experiment-runner`. Block B01 uses source revision `68a75fff317318296f3ada7b7e20d193f5bd04db`. The distributed testbed runs on five Ubuntu Server 26.04 LTS virtual machines hosted by Proxmox VE 9.2.2.
 
 ## Project status and continuation
 
-**[PROJECT_STATUS.md](PROJECT_STATUS.md)** is the authoritative implementation status and continuation log. It records completed work, verification, the exact next component, source documents, and decisions needed to resume work in a new session. Update it whenever the implementation progresses.
+**[PROJECT_STATUS.md](PROJECT_STATUS.md)** records the current implementation status, experimental verification, software locations, and technical development history.
 
 ## Computational experiment E0
 
 The E0 mathematical and computational source is available in the separate public repository [EACLD-Mathematical-Model](https://github.com/Mihailescu-Ghiuzan-Chiper-Research/EACLD-Mathematical-Model). It contains the Bayesian engine, simulator, evaluation scripts, experiment configurations and tests, matching the source in `EACLD_E0_Experiment_2026_11_04.zip` (SHA-256: `0c495ac36ef06c5654673a6996d6478953750dd0eb414ba45eede0e1c3404454`). The full research archive, including generated data, results and figures, is maintained on the TUIAȘI Google Drive in `03 Experimente și rezultate`. This testbed reuses the E0 inference engine through the existing `core/vendor/e0/` integration.
 
-### E0 source archive and import repair (2026-11-12)
+### E0 source package and test environment
 
-The vendored archive `core/vendor/e0/e0_source.zip.b64` contains the original `EACLD_E0_Experimental_Package/eacld/simulator.py`, `eacld/core.py`, `eacld/__init__.py`, `config/e0_config.json`, `results/fitted_model.json`, and `tests/test_core.py`. On 12 November 2026, the original `simulator.py` was restored from `EACLD-Mathematical-Model`, correcting the missing module that caused `ModuleNotFoundError: No module named 'eacld.simulator'` during earlier GitHub Actions test collection. The existing E0 Bayesian engine `eacld/core.py` was not modified.
+The E0 package in `core/vendor/e0/e0_source.zip.b64` contains `EACLD_E0_Experimental_Package/eacld/simulator.py`, `eacld/core.py`, `eacld/__init__.py`, `config/e0_config.json`, `results/fitted_model.json`, and `tests/test_core.py`. VM-CORE loads the Bayesian engine and calibrated model from this package.
 
-The archive was updated on `main` (commit `333bb956`) and `feature/h4-experiment-runner` (commit `841c96b`). On the H4 branch, `control/experiments/verify_h1_h4.sh` now extracts the archive and uses `core/vendor/e0/EACLD_E0_Experimental_Package` in `PYTHONPATH` for VM-CORE regression tests (commit `4629c76`). GitHub Actions uses manual `workflow_dispatch`; the distributed experimental verification results are recorded separately below.
+The verification script `control/experiments/verify_h1_h4.sh` extracts the E0 archive and sets `PYTHONPATH` to `core/vendor/e0/EACLD_E0_Experimental_Package` for the VM-CORE regression tests. The GitHub Actions workflow can also be started with `workflow_dispatch`.
 
 ## Virtual machine allocation
 
@@ -50,7 +50,7 @@ Application source and Docker configurations are tracked in the repository. The 
 
 ## Experimental verification
 
-On 16 November 2026, Mihai Ghiuzan completed experimental block B01 on the five-VM testbed. Episodes H1-001, H2-001, H3-001 and H4-001 produced the expected diagnoses and traceable telemetry records. Baseline process and intervention states were restored after execution, and the consolidated regression suite passed 72 tests.
+Experimental block B01 was executed on the five-VM testbed using the pinned source revision. Episodes H1-001, H2-001, H3-001 and H4-001 produced the expected diagnoses and traceable telemetry records. The process baseline and intervention states were restored after execution, and the consolidated regression suite passed 72 tests.
 
 ## Information access boundaries
 

@@ -10,7 +10,7 @@
 **Next software task:** Evaluate the B01 evidence and conduct additional experimental blocks according to the protocol  
 **Next infrastructure task:** Maintain the configured five-VM testbed for subsequent experimental runs
 
-This file is the **single authoritative implementation checkpoint** for continuation across collaborators and ChatGPT sessions. README.md is the repository entry point; this document holds the current status and chronological work log. The source on each referenced Git branch defines that branch's implementation; main retains the initial service implementation. The V1 architecture document is authoritative for technical requirements.
+This document records the current implementation, verified experiments, and chronological work log. The `main` branch contains the initial distributed services, while `feature/h4-experiment-runner` contains the cumulative H1–H4 experimental implementation. Architecture V1 defines the original technical contracts.
 
 ## 1. Current implementation status
 
@@ -21,21 +21,21 @@ This file is the **single authoritative implementation checkpoint** for continua
 | Shared binary frame and HMAC-SHA256 | shared/eacld_contracts/frame.py | Implemented | 12 local shared-contract tests passed in previous implementation session |
 | MQTT topic and access definitions | shared/eacld_contracts/topics.py | Implemented | Included in shared-contract tests |
 | HTTP / LiveEnvironment contracts | shared/eacld_contracts/interfaces.py | Defined | Included in shared-contract tests |
-| eacld-control / VM-CONTROL | control/services/control/ | Initial implementation committed | 12 local unit tests passed in previous implementation session |
-| eacld-nodes / VM-NODES | nodes/services/nodes/ | Initial implementation committed | 21 local unit/API tests passed; MQTT broker mocked |
-| eacld-reference / VM-REFERENCE | reference/services/reference/ | Initial implementation committed | 19 local unit/API tests passed on Python 3.13.5; two HTTP listeners and fresh reference read passed a local smoke test with a stubbed plant |
-| eacld-g1 / VM-EDGE | edge/services/g1/ | Initial implementation committed | 19 local unit/configuration tests passed on Python 3.13.5; MQTT forwarding tested with a fake client; real broker not yet tested |
-| eacld-g2 / VM-EDGE | edge/services/g2/ | Initial implementation committed | 19 local unit/configuration tests passed on Python 3; MQTT tested with a fake client, live broker pending |
-| eacld-edge-control / VM-EDGE | edge/services/edge-control/ | Initial implementation committed | 8 unit/API tests committed; local socket + HTTP integration and live-VM operation not independently verified |
-| eacld-core / VM-CORE | core/services/core/ | Initial implementation committed | 9 new tests committed; original E0 core 9/9 tests passed locally; live MQTT/Postgres/VM integration unverified |
-| Existing E0 Bayesian engine | core/vendor/e0/e0_source.zip.b64 | Original E0 source package updated with `eacld/simulator.py`; Bayesian `eacld/core.py` unchanged | Missing E0 simulator module restored in both branches on 2026-11-12 (`333bb956`, `841c96b`); previous E0 core tests 9/9 passed locally |
+| eacld-control / VM-CONTROL | control/services/control/ | Deployed in B01 | 12 local unit tests passed; distributed process and experiment control exercised in B01 |
+| eacld-nodes / VM-NODES | nodes/services/nodes/ | Deployed in B01 | 21 local unit/API tests passed; authenticated telemetry and node-bias control exercised in B01 |
+| eacld-reference / VM-REFERENCE | reference/services/reference/ | Deployed in B01 | 19 local unit/API tests passed; reference acquisition service included in five-VM execution |
+| eacld-g1 / VM-EDGE | edge/services/g1/ | Deployed in B01 | 19 local unit/configuration tests passed; MQTT forwarding exercised in the distributed H1–H4 sequence |
+| eacld-g2 / VM-EDGE | edge/services/g2/ | Deployed in B01 | 19 local unit/configuration tests passed; controlled mutation and replay exercised in H3/H4 |
+| eacld-edge-control / VM-EDGE | edge/services/edge-control/ | Deployed in B01 | 8 unit/API tests committed; G2 intervention control and cleanup exercised in the distributed execution |
+| eacld-core / VM-CORE | core/services/core/ | Deployed in B01 | 9 service tests committed; E0 core 9/9 local tests passed; persisted H1–H4 diagnoses recorded in B01 |
+| E0 Bayesian engine | core/vendor/e0/e0_source.zip.b64 | Integrated through `LiveEnvironment` | E0 source package includes `eacld/core.py`, `eacld/simulator.py`, configuration, fitted model and core tests; 9/9 original tests passed locally |
 | H1 — process intervention | control/experiments/h1_run.py; restricted VM-CORE telemetry/diagnosis API | Committed on feature/h1-experiment-runner; inherited by H2/H3 branches | Operator and API unit tests added; baseline, injected state and selected diagnostic frame recorded |
 | H2 — virtual sensor measurement bias | nodes/services/nodes/src/nodes.py; control/experiments/h2_run.py | Committed on feature/h2-experiment-runner; inherited by H3 branch | Four local runner tests recorded as passed; bias API tests and automatic restoration implemented |
 | H3 — G2 telemetry mutation | edge/services/g2/src/g2.py; edge/services/edge-control/src/agent.py; control/experiments/h3_run.py; VM-CORE frame selection | Committed on feature/h3-experiment-runner | Tests added for G2 mutation evidence, exact VM-CORE frame selection and operator cleanup |
 | H4 — authentic telemetry replay | edge/services/g2/src/g2.py; edge/services/edge-control/src/agent.py; control/experiments/h4_run.py; VM-CORE sequence registry and exact record selection | Committed on feature/h4-experiment-runner | Tests added for bounded frame capture, authentic stale replay, exact selected diagnosis and cleanup |
-| H1–H4 compatibility | control/tests/test_experiment_compatibility.py; control/experiments/verify_h1_h4.sh | Committed on feature/h4-experiment-runner | Consolidated runner now extracts E0 archive and uses correct VM-CORE `PYTHONPATH` (`4629c76`); next action: execute regression suite |
+| H1–H4 compatibility | control/tests/test_experiment_compatibility.py; control/experiments/verify_h1_h4.sh | Implemented and verified on feature/h4-experiment-runner | Consolidated runner loads the E0 package and VM-CORE Python path; 72 regression tests passed in B01 |
 | Distributed VM deployment | Five Proxmox VE 9.2.2 virtual machines, Ubuntu Server 26.04 LTS | Deployed and tested | Mihai reported successful H1–H4 execution across all five VMs on 16 November 2026 |
-| Regression verification | `control/experiments/verify_h1_h4.sh` | 72 tests passed | Mihai reported passing the suite after installing `httpx` in the temporary test environment; GitHub Actions remains manually triggered |
+| Regression verification | `control/experiments/verify_h1_h4.sh` | 72 tests passed | H1–H4 operator, gateway, node and core regression tests; manual GitHub Actions trigger available |
 
 
 ## 2. Distributed execution checkpoint (16 November 2026)
@@ -49,15 +49,15 @@ Mihai Ghiuzan reported successful execution of block `B01` across five virtual m
 | `H3-001` | Modified frame after authentication; invalid HMAC, sequence unavailable | H3 |
 | `H4-001` | Authentic retransmitted frame; valid HMAC, stale sequence | H4 |
 
-The node bias was restored to zero, G2 interventions were cleared, and the process returned to 22,000 m°C. Mihai reported 72 passed regression tests after installing `httpx` in the temporary testing environment. The evidence archive `EACLD-B01-results.tar.gz` was delivered by email and has not been committed to this repository; it contains private intervention ground truth. Block B01 establishes successful functional execution for the selected parameters, not statistical validation across repeated blocks.
+The node bias was restored to zero, G2 intervention states were cleared, and the virtual process returned to 22,000 m°C. The consolidated regression suite passed 72 tests. Mihai delivered the four episode records in `EACLD-B01-results.tar.gz`.
 
 ## 3. Completion of the two authorized service implementations
 
-**eacld-edge-control / VM-EDGE: initial implementation committed.** The source-restricted HTTP agent listens on 10.60.30.14:8300 (NET-CONTROL) and authorizes only VM-CONTROL at 10.60.30.10 for intervention requests. G2 has a private Unix-domain command socket shared with the agent through a dedicated Docker volume. Explicit mutate, replay and clear commands stage G2 interventions without autonomously selecting experimental scenarios. The G1 application and Mosquitto ACL/host port remain unchanged. Eight local unit/API tests are committed. Live VM-EDGE integration testing is pending. The edge-control API contract is an implementation-level extension to the V1 health endpoint.
+**eacld-edge-control / VM-EDGE: initial implementation committed.** The source-restricted HTTP agent listens on 10.60.30.14:8300 (NET-CONTROL) and authorizes only VM-CONTROL at 10.60.30.10 for intervention requests. G2 has a private Unix-domain command socket shared with the agent through a dedicated Docker volume. VM-CONTROL selects and schedules experimental scenarios through explicit G2 mutate, replay and clear commands. Eight local unit/API tests are committed, and G2 intervention control was exercised during B01. The edge-control API contract is an implementation-level extension to the V1 health endpoint.
 
-**eacld-core / VM-CORE: initial implementation committed.** Core subscribes only to accepted/+ using the core MQTT principal, parses the original 94-byte frame contract, validates HMAC against VM-CORE-only node keys and persists anti-replay state and received telemetry in internal PostgreSQL 16. The private E0 computational source, fitted model and configuration were selectively copied from the verified Drive archive into a compact reproducible source package without any private ground-truth datasets. E0 eacld/core.py is unmodified and loaded by the container at build time. The LiveEnvironment adapter executes four available physical/security probes and returns only observed results and nominal configured costs. The explicit diagnosis endpoint on VM-CORE NET-CONTROL requires operator-provided mode, episode identifiers, baseline and threshold.
+**eacld-core / VM-CORE: initial implementation committed.** Core subscribes only to accepted/+ using the core MQTT principal, parses the original 94-byte frame contract, validates HMAC against VM-CORE-only node keys and persists anti-replay state and received telemetry in internal PostgreSQL 16. The packaged E0 computational source, fitted model and configuration are loaded by the VM-CORE container. The `LiveEnvironment` adapter executes four physical and security verification actions and returns their observed outcomes, latency, communication volume and configured costs. The explicit diagnosis endpoint on VM-CORE NET-CONTROL requires operator-provided mode, episode identifiers, baseline and threshold.
 
-**Verification status:** Original E0 mathematical core tests: 9 passed locally. New tests for edge-control and core services: 8 and 9 committed, respectively. Seven GitHub Actions runs triggered by pushes on 10–11 November 2026 failed in the VM-CORE job: `ModuleNotFoundError: No module named 'eacld.simulator'` during E0 test collection; the latest VM-EDGE job passed. The vendored E0 package was repaired on 2026-11-12 by restoring the original `eacld/simulator.py` to `core/vendor/e0/e0_source.zip.b64` on `main` (`333bb956`) and `feature/h4-experiment-runner` (`841c96b`). The consolidated H1–H4 regression script now extracts the package and sets the correct VM-CORE import path (`4629c76`). The GitHub Actions workflow remains manually triggered through `workflow_dispatch`; no post-fix GitHub Actions run has been confirmed. The separate distributed regression suite passed 72 tests on 16 November 2026. Distributed end-to-end integration was demonstrated during the reported B01 execution across all five VMs. Runtime secrets and private experimental labels are excluded from GitHub.
+**Verification status:** The original E0 mathematical core suite passed 9/9 local tests; the edge-control and VM-CORE service suites contain 8 and 9 tests, respectively. The H1–H4 regression suite passed 72 tests on 16 November 2026, and the four distributed B01 episodes recorded their expected diagnostic results. GitHub Actions uses the manual `workflow_dispatch` trigger.
 
 
 ## 4. Implementation and repository decisions
@@ -66,15 +66,15 @@ The node bias was restored to zero, G2 interventions were cleared, and the proce
 2. The deployed architecture contains **five Ubuntu Server 26.04 LTS virtual machines** under Proxmox VE 9.2.2 and **seven application services**. Each VM has its own Docker Compose project under /opt/eacld/{control,nodes,reference,edge,core}.
 3. VM networks: Proxmox `vmbr610` NET-DATA (10.60.10.0/24), `vmbr620` NET-PROBE (10.60.20.0/24), `vmbr630` NET-CONTROL (10.60.30.0/24), `vmbr640` NET-PLANT (10.60.40.0/24), and `vmbr1` VLAN 200 for administration (10.100.200.0/24).
 4. VM-CONTROL owns the process simulation, private orchestration, injection, and private state. Its NET-PLANT HTTP interface exposes public process observations only.
-5. VM-NODES and VM-REFERENCE independently observe the **same** simulated process. They have separate acquisition services and paths, not independent physical-process sources.
+5. VM-NODES and VM-REFERENCE observe the **same** simulated process through separate acquisition services and communication paths.
 6. Telemetry runs through VM-NODES → VM-EDGE G1 → VM-EDGE G2 → VM-CORE. Active checks travel directly from VM-CORE to VM-NODES or VM-REFERENCE over NET-PROBE, bypassing the telemetry gateway.
-7. The existing E0 Bayesian computational core is reused, not rewritten. VM-CORE integrates it through LiveEnvironment.
+7. VM-CORE integrates the E0 Bayesian inference and decision engine through `LiveEnvironment`.
 8. The V1 technical specification is maintained in Romanian on TUIAȘI Google Drive for the infrastructure implementer; this repository is in English.
-9. Secrets, passwords, per-node HMAC keys, runtime databases, and private ground-truth artifacts are not committed to GitHub. The root .dockerignore also excludes local secrets and runtime files from Docker build contexts.
+9. Runtime secrets, per-node HMAC keys, persistent databases and intervention ground truth remain in access-restricted runtime storage. `.gitignore` and `.dockerignore` exclude secrets and runtime files from source-control and image-build contexts.
 10. The original E0 source, configurations and test scripts are maintained in the separate public repository `Mihailescu-Ghiuzan-Chiper-Research/EACLD-Mathematical-Model`. The deployment-oriented E0 integration remains in `core/vendor/e0/`.
 11. Both repositories are public under the GitHub organization `Mihailescu-Ghiuzan-Chiper-Research`, renamed on 16 November 2026.
 
-**Division of work:** Mihai prepared the five VMs, networking and base software on the Proxmox host. Mihai was granted Owner access to the GitHub organization, now named `Mihailescu-Ghiuzan-Chiper-Research`. The infrastructure assignment and technical documentation were communicated to him by email on 11 November 2026. Repository development covers EACLD application services, integrations, configurations, and tests. Deployment and initial end-to-end verification are complete; additional experimental blocks remain to be evaluated.
+**Implementation responsibilities:** Mihai prepared the five virtual machines, network configuration and base services on Proxmox. The repository contains application services, integration code, configuration and regression tests. B01 established the distributed execution checkpoint used for the subsequent experimental program.
 
 ## 5. Reference documents and locations
 

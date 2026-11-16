@@ -85,7 +85,7 @@ dependencies and preserved E0 model integration. Execute them in the
 repository's VM-CORE test environment using the same package paths as other
 core tests.
 
-The B01 block executed H1-001, H2-001, H3-001 and H4-001 on the five-VM Proxmox testbed on 16 November 2026. All four episodes were recorded with their expected diagnoses, and the consolidated regression suite passed 72 tests. The verification script extracts the E0 package and configures the VM-CORE import path.
+Block B01 executed episodes H1-001, H2-001, H3-001 and H4-001 on the five-VM Proxmox testbed. The four episode records contain the expected diagnoses, and the consolidated regression suite passed 72 tests. The verification script extracts the E0 package and configures the VM-CORE import path.
 
 
 ## H2 — node-local measurement bias

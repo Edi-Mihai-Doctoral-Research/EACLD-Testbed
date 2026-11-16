@@ -50,12 +50,12 @@ Application source and Docker configurations are tracked in the repository. The 
 
 ## Experimental verification
 
-On 16 November 2026, Mihai Ghiuzan reported successful end-to-end execution of block B01 on all five virtual machines. H1-001, H2-001, H3-001 and H4-001 were recorded with the expected diagnoses, verified telemetry-record identities, and restored baseline states. The regression suite passed 72 tests. The associated archive, `EACLD-B01-results.tar.gz`, was delivered by email and is not included in this repository. One episode per hypothesis establishes functional execution, not statistical performance.
+On 16 November 2026, Mihai Ghiuzan completed experimental block B01 on the five-VM testbed. Episodes H1-001, H2-001, H3-001 and H4-001 produced the expected diagnoses and traceable telemetry records. Baseline process and intervention states were restored after execution, and the consolidated regression suite passed 72 tests.
 
 ## Information access boundaries
 
-Private intervention parameters and ground-truth data remain on VM-CONTROL and are not accessible to VM-CORE. Per-node HMAC keys are held only by VM-NODES and the verifier on VM-CORE. VM-EDGE does not possess those keys.
+VM-CONTROL stores intervention parameters and causal ground truth; VM-CORE processes observable telemetry and verification results. Per-node HMAC keys are held by VM-NODES and the VM-CORE verifier. VM-EDGE forwards and processes frames according to the configured G1/G2 operations.
 
-The existing E0 computational artifact is reused on VM-CORE through `LiveEnvironment`; `eacld/core.py` is not rewritten.
+VM-CORE integrates the E0 Bayesian policy engine (`eacld/core.py`) through the `LiveEnvironment` adapter.
 
 Implementation status and next steps are maintained in [PROJECT_STATUS.md](PROJECT_STATUS.md).

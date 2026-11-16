@@ -1,9 +1,6 @@
-# H1 distributed execution
+# Distributed H1–H4 experimental execution
 
-This directory provides one operator-side experiment runner. It drives the
-existing private process orchestrator on VM-CONTROL and the restricted
-diagnosis service on VM-CORE. It never sends the injected H1 label, schedule,
-or private ground truth to VM-CORE.
+This directory provides the H1–H4 experiment runners. They coordinate the VM-CONTROL process and intervention services with the source-restricted diagnosis API on VM-CORE. VM-CONTROL retains intervention labels, schedules and causal ground truth; VM-CORE processes selected telemetry and verification evidence.
 
 ## Prerequisites
 
@@ -12,18 +9,15 @@ approved testbed specification. On VM-CONTROL, the complete repository must be
 checked out in `/opt/eacld`. VM-NODES must publish an enabled, authenticated
 node with `node_id=1`, zero temperature bias and zero humidity bias. MQTT
 credentials, node HMAC keys, PostgreSQL, broker routing and control-agent
-network access must be configured. This experiment runner does not install
-services or change private keys.
+network access must be configured. The runners execute against the pre-provisioned services and credentials.
 
 Run from **VM-CONTROL**, not VM-CORE or an administration workstation.
 Python 3.12+ is sufficient for the host-side runner. Docker Compose is used
 for private local operations against the running `eacld-control` container.
 
-## Single invocation
+## H1 — process intervention
 
-The following values reproduce the *provisional H1 parameter example*
-introduced in the operational protocol. They are not a calibrated or
-approved scientific experiment design:
+The following command reproduces episode H1-001 in experimental block B01 with node 1, a baseline temperature of 22,000 m°C and a process disturbance of +6,912 m°C:
 
 ```bash
 cd /opt/eacld/control
@@ -49,8 +43,7 @@ The command performs, in order:
 5. Save the private process intervention log on VM-CONTROL.
 6. Observe incoming authenticated, fresh telemetry with the expected
    temperature and request B6 diagnosis of that exact telemetry record.
-   A superseded frame produces HTTP 409 instead of silently diagnosing a
-   different frame; the runner can retry before the timeout.
+   If the selected record is superseded, the request returns HTTP 409 and the runner retries within the configured timeout.
 7. Read back the persisted VM-CORE diagnosis and verify its telemetry ID,
    temperature, authentication and freshness flags.
 8. Write an episode manifest and retain both the public diagnostic evidence
@@ -62,12 +55,9 @@ VM-CONTROL. Files include `parameters.json`, `git_commit.txt`,
 `private_ground_truth.json`, `diagnosis_response.json`,
 `core_diagnosis_record.json`, and `manifest.json`.
 Failures leave `failure.json` and any evidence captured beforehand.
-A new episode must use a new identifier; this runner does not overwrite old
-results.
+Each repetition uses a new episode identifier to retain the preceding evidence.
 
-The sequence verifies the intervention and the identity of the diagnostic
-input. It **does not** assert that the B6 decision is correct; that judgment
-must come from subsequent research analysis.
+Each episode stores the selected telemetry, B6 diagnostic output and private causal ground truth for subsequent comparison.
 
 ## VM-CORE integration
 
@@ -84,7 +74,7 @@ The restricted VM-CORE API adds:
 The new observation routes have the same VM-CONTROL-only source-IP
 restriction as the diagnosis route. Ground-truth labels remain outside VM-CORE.
 
-## Local tests and deployment status
+## Verification
 
 ```bash
 python3 -m unittest discover -s control/tests -p test_h1_run.py -v
@@ -95,12 +85,7 @@ dependencies and preserved E0 model integration. Execute them in the
 repository's VM-CORE test environment using the same package paths as other
 core tests.
 
-The H1 runner's local simulated tests are separate from five-VM end-to-end
-verification. Live-VM execution remains pending until the infrastructure is
-available. The original E0 `eacld/simulator.py` was restored to the vendor
-archive on 2026-11-12 (`main`: `333bb956`; H4 branch: `841c96b`). The
-H1–H4 regression script now extracts that archive and uses the correct
-VM-CORE import path (`4629c76`).
+The B01 block executed H1-001, H2-001, H3-001 and H4-001 on the five-VM Proxmox testbed on 16 November 2026. All four episodes were recorded with their expected diagnoses, and the consolidated regression suite passed 72 tests. The verification script extracts the E0 package and configures the VM-CORE import path.
 
 
 ## H2 — node-local measurement bias
@@ -126,8 +111,7 @@ python3 experiments/h2_run.py \
   --timeout-seconds 120
 ```
 
-The selected example starts with the process at 22000 mC, leaves the common
-process unchanged, and changes node 1's signed measurement to 28912 mC. The
+In B01, H2 holds the process at 22,000 m°C and applies a +6,912 m°C node-local bias, producing an authenticated sensor measurement of 28,912 m°C. The
 initial temperature-bias and humidity-bias settings for that node must both
 be zero; the runner checks these values instead of silently overwriting an
 unknown configuration.
@@ -164,10 +148,7 @@ Focused local runner tests:
 python3 -m unittest discover -s control/tests -p test_h2_run.py -v
 ```
 
-The runner uses the active node's current configuration rather than the
-example population in `nodes/config/nodes.example.json`. The numeric values
-above illustrate a reproducible H2 episode; experimental parameter selection
-remains part of the research design.
+The H2 runner reads and verifies the active node configuration before applying and restoring the B01 measurement bias.
 
 
 ## H3 — controlled G2 header mutation
@@ -193,8 +174,7 @@ python3 experiments/h3_run.py \
   --timeout-seconds 120
 ```
 
-These illustrative values change the 32-bit big-endian temperature field
-from 22000 mC to 28912 mC. The frame header is 62 bytes long; its signed
+The B01 H3 intervention changes the 32-bit big-endian temperature field from 22,000 to 28,912 m°C. The frame header is 62 bytes long; its signed
 temperature occupies byte offsets **38–41** (zero-based). The mutation
 affects one of those four bytes only. The last 32 bytes (HMAC-SHA256) remain
 unchanged.
@@ -269,9 +249,7 @@ python3 experiments/h4_run.py \
   --timeout-seconds 120
 ```
 
-The example values are in milli-degrees Celsius and milli-percent units.
-The nominal process is held at 22000 mC and 50000 mPct; H4 changes neither
-the sensor bias nor the physical-process state.
+Block B01 uses temperature in m°C and humidity in mPct. During H4, the nominal process remains at 22,000 m°C and 50,000 mPct while G2 retransmits an authenticated earlier frame.
 
 The runner performs the following sequence:
 
@@ -324,7 +302,7 @@ operator-only control routes, stable telemetry IDs and separate
 VM-CONTROL ground-truth artifacts. Each experiment can be executed as an
 independent, uniquely identified episode.
 
-## H1–H4 consolidated local verification
+## H1–H4 regression verification
 
 The operator CLI schemas and test-injection interfaces are checked together
 by `control/tests/test_experiment_compatibility.py`. The consolidated

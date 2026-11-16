@@ -48,7 +48,7 @@ VM-CORE has NET-DATA 10.60.10.15, NET-PROBE 10.60.20.15 and NET-CONTROL 10.60.30
 
 ## Verification
 
-`core/tests/test_core_service.py` covers HMAC verification, keyring and topic handling, active probes, nonce verification, E0 inference integration, MQTT ingestion and restricted operator control. The original nine E0 mathematical core tests are included in the suite. The consolidated H1–H4 regression script loads the E0 source package through `core/vendor/e0/EACLD_E0_Experimental_Package`; 72 tests passed during the 16 November 2026 B01 verification. GitHub Actions retains its manual execution workflow.
+`core/tests/test_core_service.py` covers HMAC verification, keyring and topic handling, active probes, nonce verification, E0 inference integration, MQTT ingestion and restricted operator control. The nine E0 mathematical core tests are included in the suite. The consolidated H1–H4 regression script loads the E0 source package through `core/vendor/e0/EACLD_E0_Experimental_Package`. Block B01 passed 72 regression tests; GitHub Actions provides a manual execution workflow.
 
 Distributed B01 execution exercised MQTT transport, persistent telemetry records and E0 inference across the five virtual machines.
 

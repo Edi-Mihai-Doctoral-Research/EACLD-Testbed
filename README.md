@@ -2,7 +2,7 @@
 
 Evidence-Adaptive Cross-Layer Diagnosis (EACLD) — Distributed Experimental Testbed.
 
-This repository implements the EACLD distributed experimental testbed defined in technical architecture V1, maintained in the TUIAȘI research directory. The initial services are on `main`; the cumulative H1–H4 experimental operators and regression tests are on `feature/h4-experiment-runner`.
+This public repository contains the EACLD distributed experimental testbed. The initial seven application services are available on `main`; the complete H1–H4 experimental operators and regression tests are on `feature/h4-experiment-runner` (experimental commit `68a75fff317318296f3ada7b7e20d193f5bd04db`). The deployed testbed runs on five Ubuntu Server 26.04 LTS virtual machines using Proxmox VE 9.2.2.
 
 ## Project status and continuation
 
@@ -10,13 +10,13 @@ This repository implements the EACLD distributed experimental testbed defined in
 
 ## Computational experiment E0
 
-The original E0 mathematical and computational source is maintained in the separate private repository [EACLD-Mathematical-Model](https://github.com/Edi-Mihai-Doctoral-Research/EACLD-Mathematical-Model). It contains the Bayesian engine, simulator, evaluation scripts, experiment configurations and tests, matching the source in `EACLD_E0_Experiment_2026_11_04.zip` (SHA-256: `0c495ac36ef06c5654673a6996d6478953750dd0eb414ba45eede0e1c3404454`). The full research archive, including generated data, results and figures, is maintained on the TUIAȘI Google Drive in `03 Experimente și rezultate`. This testbed reuses the E0 inference engine through the existing `core/vendor/e0/` integration.
+The E0 mathematical and computational source is available in the separate public repository [EACLD-Mathematical-Model](https://github.com/Mihailescu-Ghiuzan-Chiper-Research/EACLD-Mathematical-Model). It contains the Bayesian engine, simulator, evaluation scripts, experiment configurations and tests, matching the source in `EACLD_E0_Experiment_2026_11_04.zip` (SHA-256: `0c495ac36ef06c5654673a6996d6478953750dd0eb414ba45eede0e1c3404454`). The full research archive, including generated data, results and figures, is maintained on the TUIAȘI Google Drive in `03 Experimente și rezultate`. This testbed reuses the E0 inference engine through the existing `core/vendor/e0/` integration.
 
 ### E0 source archive and import repair (2026-11-12)
 
 The vendored archive `core/vendor/e0/e0_source.zip.b64` contains the original `EACLD_E0_Experimental_Package/eacld/simulator.py`, `eacld/core.py`, `eacld/__init__.py`, `config/e0_config.json`, `results/fitted_model.json`, and `tests/test_core.py`. On 12 November 2026, the original `simulator.py` was restored from `EACLD-Mathematical-Model`, correcting the missing module that caused `ModuleNotFoundError: No module named 'eacld.simulator'` during earlier GitHub Actions test collection. The existing E0 Bayesian engine `eacld/core.py` was not modified.
 
-The archive was updated on `main` (commit `333bb956`) and `feature/h4-experiment-runner` (commit `841c96b`). On the H4 branch, `control/experiments/verify_h1_h4.sh` now extracts the archive and uses `core/vendor/e0/EACLD_E0_Experimental_Package` in `PYTHONPATH` for VM-CORE regression tests (commit `4629c76`). GitHub Actions still uses manual `workflow_dispatch`; it has not been run following these changes.
+The archive was updated on `main` (commit `333bb956`) and `feature/h4-experiment-runner` (commit `841c96b`). On the H4 branch, `control/experiments/verify_h1_h4.sh` now extracts the archive and uses `core/vendor/e0/EACLD_E0_Experimental_Package` in `PYTHONPATH` for VM-CORE regression tests (commit `4629c76`). GitHub Actions uses manual `workflow_dispatch`; the distributed experimental verification results are recorded separately below.
 
 ## Virtual machine allocation
 
@@ -42,11 +42,15 @@ Application source and Docker configurations are tracked in the repository. The 
 
 ## Communication networks
 
-- NET-DATA: VMnet2, 10.60.10.0/24 — MQTT telemetry through VM-EDGE
-- NET-PROBE: VMnet3, 10.60.20.0/24 — direct active verification and reference requests
-- NET-CONTROL: VMnet4, 10.60.30.0/24 — authorized agent configuration and control
-- NET-PLANT: VMnet5, 10.60.40.0/24 — separate reads of the shared virtual process
-- ADMIN: VMnet8, NAT/DHCP — system administration
+- NET-DATA: Proxmox bridge `vmbr610`, 10.60.10.0/24 — MQTT telemetry through VM-EDGE
+- NET-PROBE: `vmbr620`, 10.60.20.0/24 — direct active verification and reference requests
+- NET-CONTROL: `vmbr630`, 10.60.30.0/24 — authorized agent configuration and control
+- NET-PLANT: `vmbr640`, 10.60.40.0/24 — separate reads of the shared virtual process
+- ADMIN: `vmbr1`, VLAN 200, 10.100.200.0/24 — system administration
+
+## Experimental verification
+
+On 16 November 2026, Mihai Ghiuzan reported successful end-to-end execution of block B01 on all five virtual machines. H1-001, H2-001, H3-001 and H4-001 were recorded with the expected diagnoses, verified telemetry-record identities, and restored baseline states. The regression suite passed 72 tests. The associated archive, `EACLD-B01-results.tar.gz`, was delivered by email and is not included in this repository. One episode per hypothesis establishes functional execution, not statistical performance.
 
 ## Information access boundaries
 

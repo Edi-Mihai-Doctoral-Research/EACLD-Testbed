@@ -1,14 +1,14 @@
 # EACLD-Testbed — Project Status and Continuation Log
 
-**Last updated:** 2026-11-12  
-**Repository:** Edi-Mihai-Doctoral-Research/EACLD-Testbed  
-**Visibility:** Private  
+**Last updated:** 2026-11-16  
+**Repository:** Mihailescu-Ghiuzan-Chiper-Research/EACLD-Testbed  
+**Visibility:** Public  
 **Central status branch:** main  
 **Main implementation checkpoint:** Seven initial application services committed on main; H1–H4 experiment code developed separately  
 **Latest experimental branch:** feature/h4-experiment-runner (includes H1–H3 implementation history)  
-**Current phase:** H1–H4 operator implementations committed; E0 missing-module import corrected on `main` and `feature/h4-experiment-runner`; consolidated regression script corrected for execution  
-**Next software task:** Execute the consolidated H1–H4 regression suite and resolve any identified integration defects  
-**Next infrastructure task:** Mihai to identify temporary hardware resources for a 10-day testbed window, prepare five VMs, deploy the services, and begin end-to-end integration
+**Current phase:** Five-VM Proxmox testbed deployed; block B01 executed successfully for H1–H4; all four episodes recorded and the consolidated regression suite passed 72 tests  
+**Next software task:** Evaluate the B01 evidence and conduct additional experimental blocks according to the protocol  
+**Next infrastructure task:** Maintain the configured five-VM testbed for subsequent experimental runs
 
 This file is the **single authoritative implementation checkpoint** for continuation across collaborators and ChatGPT sessions. README.md is the repository entry point; this document holds the current status and chronological work log. The source on each referenced Git branch defines that branch's implementation; main retains the initial service implementation. The V1 architecture document is authoritative for technical requirements.
 
@@ -17,7 +17,7 @@ This file is the **single authoritative implementation checkpoint** for continua
 | Area | Location | Status | Verification |
 | --- | --- | --- | --- |
 | Repository layout | control/, nodes/, reference/, edge/, core/ | Created | Directory layout aligned with architecture V1 |
-| Original E0 computational source | EACLD-Mathematical-Model (separate private repository) | Imported and verified | 14 original source, configuration, test and documentation files; source tree identical to archived E0 source |
+| Original E0 computational source | EACLD-Mathematical-Model (separate public repository) | Imported and verified | 14 original source, configuration, test and documentation files; source tree identical to archived E0 source |
 | Shared binary frame and HMAC-SHA256 | shared/eacld_contracts/frame.py | Implemented | 12 local shared-contract tests passed in previous implementation session |
 | MQTT topic and access definitions | shared/eacld_contracts/topics.py | Implemented | Included in shared-contract tests |
 | HTTP / LiveEnvironment contracts | shared/eacld_contracts/interfaces.py | Defined | Included in shared-contract tests |
@@ -34,36 +34,49 @@ This file is the **single authoritative implementation checkpoint** for continua
 | H3 — G2 telemetry mutation | edge/services/g2/src/g2.py; edge/services/edge-control/src/agent.py; control/experiments/h3_run.py; VM-CORE frame selection | Committed on feature/h3-experiment-runner | Tests added for G2 mutation evidence, exact VM-CORE frame selection and operator cleanup |
 | H4 — authentic telemetry replay | edge/services/g2/src/g2.py; edge/services/edge-control/src/agent.py; control/experiments/h4_run.py; VM-CORE sequence registry and exact record selection | Committed on feature/h4-experiment-runner | Tests added for bounded frame capture, authentic stale replay, exact selected diagnosis and cleanup |
 | H1–H4 compatibility | control/tests/test_experiment_compatibility.py; control/experiments/verify_h1_h4.sh | Committed on feature/h4-experiment-runner | Consolidated runner now extracts E0 archive and uses correct VM-CORE `PYTHONPATH` (`4629c76`); next action: execute regression suite |
-| Distributed VM deployment | Five virtual machines | Pending | Mihai is coordinating hardware availability, VM setup, networking, and base software; a 10-day infrastructure window has been requested |
-| GitHub Actions / service unit tests | .github/workflows/eacld-unit-tests.yml | Manual `workflow_dispatch` | Earlier VM-CORE test collection failed because `eacld/simulator.py` was missing from the vendored archive; the source-package defect was corrected on both branches on 2026-11-12; no post-fix run launched |
+| Distributed VM deployment | Five Proxmox VE 9.2.2 virtual machines, Ubuntu Server 26.04 LTS | Deployed and tested | Mihai reported successful H1–H4 execution across all five VMs on 16 November 2026 |
+| Regression verification | `control/experiments/verify_h1_h4.sh` | 72 tests passed | Mihai reported passing the suite after installing `httpx` in the temporary test environment; GitHub Actions remains manually triggered |
 
 
-## 2. Completion of the two authorized service implementations
+## 2. Distributed execution checkpoint (16 November 2026)
+
+Mihai Ghiuzan reported successful execution of block `B01` across five virtual machines using the common code snapshot `feature/h4-experiment-runner`, commit `68a75fff317318296f3ada7b7e20d193f5bd04db`. All four episode manifests were recorded, with the diagnostic telemetry IDs matching the corresponding persisted records.
+
+| Episode | Observed evidence | EACLD diagnosis |
+| --- | --- | --- |
+| `H1-001` | Process and authenticated fresh telemetry: 28,912 m°C | H1 |
+| `H2-001` | Process: 22,000 m°C; authenticated fresh biased telemetry: 28,912 m°C | H2 |
+| `H3-001` | Modified frame after authentication; invalid HMAC, sequence unavailable | H3 |
+| `H4-001` | Authentic retransmitted frame; valid HMAC, stale sequence | H4 |
+
+The node bias was restored to zero, G2 interventions were cleared, and the process returned to 22,000 m°C. Mihai reported 72 passed regression tests after installing `httpx` in the temporary testing environment. The evidence archive `EACLD-B01-results.tar.gz` was delivered by email and has not been committed to this repository; it contains private intervention ground truth. Block B01 establishes successful functional execution for the selected parameters, not statistical validation across repeated blocks.
+
+## 3. Completion of the two authorized service implementations
 
 **eacld-edge-control / VM-EDGE: initial implementation committed.** The source-restricted HTTP agent listens on 10.60.30.14:8300 (NET-CONTROL) and authorizes only VM-CONTROL at 10.60.30.10 for intervention requests. G2 has a private Unix-domain command socket shared with the agent through a dedicated Docker volume. Explicit mutate, replay and clear commands stage G2 interventions without autonomously selecting experimental scenarios. The G1 application and Mosquitto ACL/host port remain unchanged. Eight local unit/API tests are committed. Live VM-EDGE integration testing is pending. The edge-control API contract is an implementation-level extension to the V1 health endpoint.
 
 **eacld-core / VM-CORE: initial implementation committed.** Core subscribes only to accepted/+ using the core MQTT principal, parses the original 94-byte frame contract, validates HMAC against VM-CORE-only node keys and persists anti-replay state and received telemetry in internal PostgreSQL 16. The private E0 computational source, fitted model and configuration were selectively copied from the verified Drive archive into a compact reproducible source package without any private ground-truth datasets. E0 eacld/core.py is unmodified and loaded by the container at build time. The LiveEnvironment adapter executes four available physical/security probes and returns only observed results and nominal configured costs. The explicit diagnosis endpoint on VM-CORE NET-CONTROL requires operator-provided mode, episode identifiers, baseline and threshold.
 
-**Verification status:** Original E0 mathematical core tests: 9 passed locally. New tests for edge-control and core services: 8 and 9 committed, respectively. Seven GitHub Actions runs triggered by pushes on 10–11 November 2026 failed in the VM-CORE job: `ModuleNotFoundError: No module named 'eacld.simulator'` during E0 test collection; the latest VM-EDGE job passed. The vendored E0 package was repaired on 2026-11-12 by restoring the original `eacld/simulator.py` to `core/vendor/e0/e0_source.zip.b64` on `main` (`333bb956`) and `feature/h4-experiment-runner` (`841c96b`). The consolidated H1–H4 regression script now extracts the package and sets the correct VM-CORE import path (`4629c76`). The GitHub Actions workflow remains manually triggered through `workflow_dispatch`; no post-fix run has been launched. Integration testing pending: live Mosquitto, PostgreSQL, Ubuntu/Docker, five-VM connectivity and end-to-end execution. Runtime secrets and private experimental labels are excluded from GitHub.
+**Verification status:** Original E0 mathematical core tests: 9 passed locally. New tests for edge-control and core services: 8 and 9 committed, respectively. Seven GitHub Actions runs triggered by pushes on 10–11 November 2026 failed in the VM-CORE job: `ModuleNotFoundError: No module named 'eacld.simulator'` during E0 test collection; the latest VM-EDGE job passed. The vendored E0 package was repaired on 2026-11-12 by restoring the original `eacld/simulator.py` to `core/vendor/e0/e0_source.zip.b64` on `main` (`333bb956`) and `feature/h4-experiment-runner` (`841c96b`). The consolidated H1–H4 regression script now extracts the package and sets the correct VM-CORE import path (`4629c76`). The GitHub Actions workflow remains manually triggered through `workflow_dispatch`; no post-fix GitHub Actions run has been confirmed. The separate distributed regression suite passed 72 tests on 16 November 2026. Distributed end-to-end integration was demonstrated during the reported B01 execution across all five VMs. Runtime secrets and private experimental labels are excluded from GitHub.
 
 
-## 3. Implementation and repository decisions
+## 4. Implementation and repository decisions
 
 1. All repository source, comments, tests, documentation, and commit messages are written in **English** for potential publication and transfer.
-2. The architecture contains **five Ubuntu Server 24.04 LTS virtual machines** under VMware Workstation Pro and **seven application services**. Each VM has its own Docker Compose project under /opt/eacld/{control,nodes,reference,edge,core}.
-3. VM networks: VMnet2 NET-DATA (10.60.10.0/24), VMnet3 NET-PROBE (10.60.20.0/24), VMnet4 NET-CONTROL (10.60.30.0/24), VMnet5 NET-PLANT (10.60.40.0/24), with separate VMnet8 NAT/DHCP for administration.
+2. The deployed architecture contains **five Ubuntu Server 26.04 LTS virtual machines** under Proxmox VE 9.2.2 and **seven application services**. Each VM has its own Docker Compose project under /opt/eacld/{control,nodes,reference,edge,core}.
+3. VM networks: Proxmox `vmbr610` NET-DATA (10.60.10.0/24), `vmbr620` NET-PROBE (10.60.20.0/24), `vmbr630` NET-CONTROL (10.60.30.0/24), `vmbr640` NET-PLANT (10.60.40.0/24), and `vmbr1` VLAN 200 for administration (10.100.200.0/24).
 4. VM-CONTROL owns the process simulation, private orchestration, injection, and private state. Its NET-PLANT HTTP interface exposes public process observations only.
 5. VM-NODES and VM-REFERENCE independently observe the **same** simulated process. They have separate acquisition services and paths, not independent physical-process sources.
 6. Telemetry runs through VM-NODES → VM-EDGE G1 → VM-EDGE G2 → VM-CORE. Active checks travel directly from VM-CORE to VM-NODES or VM-REFERENCE over NET-PROBE, bypassing the telemetry gateway.
 7. The existing E0 Bayesian computational core is reused, not rewritten. VM-CORE integrates it through LiveEnvironment.
 8. The V1 technical specification is maintained in Romanian on TUIAȘI Google Drive for the infrastructure implementer; this repository is in English.
 9. Secrets, passwords, per-node HMAC keys, runtime databases, and private ground-truth artifacts are not committed to GitHub. The root .dockerignore also excludes local secrets and runtime files from Docker build contexts.
-10. The original E0 source, configurations and test scripts are maintained in the separate private repository `Edi-Mihai-Doctoral-Research/EACLD-Mathematical-Model`. The deployment-oriented E0 integration remains in `core/vendor/e0/`.
-11. Both repositories were transferred to the GitHub organization `Edi-Mihai-Doctoral-Research` on 11 November 2026; repository access through the TUIAȘI ChatGPT GitHub connector has been restored.
+10. The original E0 source, configurations and test scripts are maintained in the separate public repository `Mihailescu-Ghiuzan-Chiper-Research/EACLD-Mathematical-Model`. The deployment-oriented E0 integration remains in `core/vendor/e0/`.
+11. Both repositories are public under the GitHub organization `Mihailescu-Ghiuzan-Chiper-Research`, renamed on 16 November 2026.
 
-**Division of work:** Mihai prepares the five VMs, networking, and base software, and identifies temporary hardware resources for a 10-day testbed window. An invitation with the Owner role was issued for Mihai in `Edi-Mihai-Doctoral-Research`. The infrastructure assignment and technical documentation were communicated to him by email on 11 November 2026. Repository development covers EACLD application services, integrations, configurations, and tests. Deployment on the prepared VMs and end-to-end verification are joint integration activities.
+**Division of work:** Mihai prepared the five VMs, networking and base software on the Proxmox host. Mihai was granted Owner access to the GitHub organization, now named `Mihailescu-Ghiuzan-Chiper-Research`. The infrastructure assignment and technical documentation were communicated to him by email on 11 November 2026. Repository development covers EACLD application services, integrations, configurations, and tests. Deployment and initial end-to-end verification are complete; additional experimental blocks remain to be evaluated.
 
-## 4. Reference documents and locations
+## 5. Reference documents and locations
 
 **Technical architecture (implementation authority):**  
 TUIAȘI Google Drive → PhD TUIASI → 2 Direcții de cercetare → 04 EACLD – diagnostic cauzal → 02 Testbed experimental → "EACLD - Arhitectura si implementarea testbedului experimental - V1.docx". The folder has been shared for Mihai's implementation work: https://drive.google.com/drive/folders/111T-Dr2pTu4cmwwpYxrpn9ZKcazLb7sI?usp=sharing.
@@ -80,7 +93,7 @@ TUIAȘI Google Drive → same shared testbed folder as architecture V1 → "EACL
 **Existing E0 computational artifact:**  
 "EACLD_E0_Experiment_2026_11_04.zip"; the existing E0 Bayesian core has already been incorporated into VM-CORE under `core/vendor/e0/`. The original computational source is maintained in the separate `EACLD-Mathematical-Model` repository.
 
-## 5. Work log
+## 6. Work log
 
 | Date | Checkpoint | Git reference |
 | --- | --- | --- |
@@ -111,8 +124,10 @@ TUIAȘI Google Drive → same shared testbed folder as architecture V1 → "EACL
 | 2026-11-12 | Updated the TUIAȘI shared experimental execution and validation protocol for the implemented H1–H4 runners, exact telemetry selection, commands, evidence and cleanup; exported an eight-page Word copy to the same shared testbed folder | TUIAȘI Drive: experimental protocol and EACLD - Protocolul de executie a experimentelor H1-H4 - 2026-11-12.docx |
 | 2026-11-12 | Restored original E0 `eacld/simulator.py` to the vendored archive in both branches, correcting the source-package import defect without changing the Bayesian engine | main `333bb956`; feature/h4-experiment-runner `841c96b` |
 | 2026-11-12 | Corrected consolidated H1–H4 regression runner to extract the E0 archive and set the VM-CORE Python package path | feature/h4-experiment-runner `4629c76` |
+| 2026-11-16 | Mihai reported successful execution of B01 across five Proxmox VMs, with H1–H4 diagnoses and 72 passing regression tests; evidence archive sent by email | feature/h4-experiment-runner `68a75fff317318296f3ada7b7e20d193f5bd04db` |
+| 2026-11-16 | GitHub organization renamed; both EACLD repositories made public | `Mihailescu-Ghiuzan-Chiper-Research` |
 
-## 6. Experimental implementation history (H1–H3)
+## 7. Experimental implementation history (H1–H4)
 
 **H1 — process intervention.** The `feature/h1-experiment-runner` branch adds `control/experiments/h1_run.py`, restricted VM-CORE evidence retrieval and an optional `expected_telemetry_id` guard for diagnosis of the latest authenticated telemetry. The operator procedure initializes the common process, schedules a process-level H1 intervention, records the resulting observations and saves the diagnostic decision alongside private intervention evidence held on VM-CONTROL. Tests and instructions are in `control/tests/`, `core/tests/` and `control/experiments/README.md`.
 
@@ -120,15 +135,15 @@ TUIAȘI Google Drive → same shared testbed folder as architecture V1 → "EACL
 
 **H3 — gateway telemetry mutation.** The `feature/h3-experiment-runner` branch derives from H2 and therefore contains H1 and H2 development work. G2 records the original and XOR-modified 94-byte frames for a one-shot header mutation while preserving the original HMAC. VM-CORE supports exact payload lookup and diagnosis of a selected persisted telemetry ID, including after newer MQTT messages arrive. `control/experiments/h3_run.py` collects G2 and VM-CORE evidence and clears the intervention. Focused tests are in `edge/tests/test_h3_mutation_evidence.py`, `core/tests/test_h3_core_selection.py` and `control/tests/test_h3_run.py`.
 
-**H4 — authentic telemetry replay.** The `feature/h4-experiment-runner` branch extends H3. G2 maintains a bounded forwarding history and stages one previously forwarded 94-byte frame selected by exact bytes. When newer telemetry arrives for the same node and boot, G2 forwards it and retransmits the older frame unchanged. The event records the reference, triggering frame and replayed frame. `control/experiments/h4_run.py` correlates the original authenticated, fresh record with the newer trigger and the duplicated authenticated, stale record in VM-CORE. B6 inference uses the exact stale record; the E0 engine and existing diagnostic routes are reused. The G2 intervention is cleared on completion or error. Tests are in `edge/tests/test_h4_replay_evidence.py`, `core/tests/test_h4_replay_selection.py` and `control/tests/test_h4_run.py`. A cross-runner compatibility suite was added at `control/tests/test_experiment_compatibility.py`; `control/experiments/verify_h1_h4.sh` executes the focused unit/API suites in sequence. Historical H1 and H2 local operator snapshots passed 3 and 4 tests, respectively, on 2026-11-11. H3/H4 focused suites are committed for execution in the configured service environments.
+**H4 — authentic telemetry replay.** The `feature/h4-experiment-runner` branch extends H3. G2 maintains a bounded forwarding history and stages one previously forwarded 94-byte frame selected by exact bytes. When newer telemetry arrives for the same node and boot, G2 forwards it and retransmits the older frame unchanged. The event records the reference, triggering frame and replayed frame. `control/experiments/h4_run.py` correlates the original authenticated, fresh record with the newer trigger and the duplicated authenticated, stale record in VM-CORE. B6 inference uses the exact stale record; the E0 engine and existing diagnostic routes are reused. The G2 intervention is cleared on completion or error. Tests are in `edge/tests/test_h4_replay_evidence.py`, `core/tests/test_h4_replay_selection.py` and `control/tests/test_h4_run.py`. A cross-runner compatibility suite was added at `control/tests/test_experiment_compatibility.py`; `control/experiments/verify_h1_h4.sh` executes the focused unit/API suites in sequence. Historical H1 and H2 local operator snapshots passed 3 and 4 tests, respectively, on 2026-11-11. The consolidated regression suite subsequently passed 72 tests on the five-VM environment, as reported on 16 November 2026.
 
 The H1–H4 experiment code and associated READMEs reside in the feature-branch history, culminating in `feature/h4-experiment-runner`. The central status file is maintained on `main` and synchronized into the active development branch.
 
-## 7. How to resume
+## 8. How to resume
 
 1. Open README.md and this central PROJECT_STATUS.md from main.
 2. Read the current architecture V1 from the TUIAȘI research directory before modifying implementation contracts.
 3. Inspect main for the initial services and `feature/h4-experiment-runner` for the cumulative H1–H4 experimental implementation.
-4. Continue with H1–H4 procedure integration and unit-level regression verification while the five-VM infrastructure is prepared.
+4. Execute further H1–H4 blocks using the deployed Proxmox testbed and evaluate the recorded evidence.
 5. Update this central PROJECT_STATUS.md on main after each implementation checkpoint, recording the feature branch, code locations and test results. The corrected E0 source archive and manual GitHub Actions workflow are documented in Section 2.
 

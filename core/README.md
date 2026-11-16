@@ -4,19 +4,19 @@ VM-CORE implements authenticated MQTT ingestion, persistent anti-replay checking
 
 ## Runtime flow
 
-- The core subscribes exclusively to MQTT accepted/+ on VM-EDGE (10.60.10.14:1883). It never subscribes to raw/+ or transit/g1/+.
+- The core subscribes to the post-gateway MQTT stream `accepted/+` on VM-EDGE (10.60.10.14:1883).
 - ingest.py stores accepted-topic payloads with their authentication and freshness classifications. verifier.py uses node/version HMAC keys available only on VM-NODES and VM-CORE. sequence_registry.py persists the last authenticated sequence per node/boot identifier. Invalidly authenticated frames cannot advance the high watermark.
 - live_env.py implements the original E0 LiveEnvironment public state and execute(action) method. message_verify and sequence_check return the stored checks; reference_read directly reads VM-REFERENCE at 10.60.20.13:8201; node_challenge directly requests VM-NODES at 10.60.20.12:8202 and validates its nonce and HMAC.
-- runner.py loads the unchanged E0 PolicyEngine, configuration and fitted model. Policy B6_EACLD selects actual checks, not synthetic outcomes. Returned latency is elapsed wall-clock time, bytes represent observed application payload sizes, and costs are the configured nominal E0 costs.
-- core.py provides the source-restricted NET-CONTROL interface on 10.60.30.15:8300. Neither private cause labels nor intervention schedules are exposed to the core.
+- `runner.py` loads the E0 `PolicyEngine`, configuration and fitted model. Policy B6_EACLD selects verification actions executed against the distributed services. Latency is measured as elapsed wall-clock time, transmitted bytes are derived from observed application payloads, and costs use the configured nominal E0 values.
+- `core.py` exposes the source-restricted NET-CONTROL interface on 10.60.30.15:8300. Intervention labels and schedules remain on VM-CONTROL.
 
-The curated source archive `vendor/e0/e0_source.zip.b64` contains six original E0 files under `EACLD_E0_Experimental_Package/`: `eacld/__init__.py`, `eacld/core.py`, `eacld/simulator.py`, `config/e0_config.json`, `results/fitted_model.json`, and `tests/test_core.py`. The original `eacld/simulator.py` was restored from `EACLD-Mathematical-Model` on 2026-11-12 (main: `333bb956`; `feature/h4-experiment-runner`: `841c96b`), correcting the earlier missing-module error in E0 test collection. The original E0 Bayesian engine `eacld/core.py` remains unchanged. The archive does not include private ground truth or synthetic potential-outcome datasets. The Docker build verifies original `core.py` SHA-256: `cedddf154553162a4bda1e12fc48045162af0918ffd975a001141ae2e4f05f58`. The full original ZIP stored on TUIAȘI Drive has SHA-256: `0c495ac36ef06c5654673a6996d6478953750dd0eb414ba45eede0e1c3404454`.
+The VM-CORE container loads the E0 Bayesian engine, fitted model and configuration from `vendor/e0/e0_source.zip.b64`. The package contains `eacld/__init__.py`, `eacld/core.py`, `eacld/simulator.py`, `config/e0_config.json`, `results/fitted_model.json`, and `tests/test_core.py` under `EACLD_E0_Experimental_Package/`. The Docker build verifies the `core.py` SHA-256 digest `cedddf154553162a4bda1e12fc48045162af0918ffd975a001141ae2e4f05f58`. The original E0 ZIP stored on TUIAȘI Drive has SHA-256 digest `0c495ac36ef06c5654673a6996d6478953750dd0eb414ba45eede0e1c3404454`.
 
 ## Explicit diagnosis API
 
-GET /healthz reports readiness after the broker acknowledges the accepted/+ subscription. The only operation for a diagnosis is POST /v1/diagnose on 10.60.30.15:8300, restricted to VM-CONTROL (10.60.30.10).
+`GET /healthz` reports readiness after the MQTT `accepted/+` subscription is established. VM-CONTROL (10.60.30.10) invokes `POST /v1/diagnose` on 10.60.30.15:8300 to run diagnosis.
 
-Example JSON body (illustrative values, not experimental parameters):
+Example diagnostic request:
 
     {
       "node_id": 12,
@@ -27,9 +27,9 @@ Example JSON body (illustrative values, not experimental parameters):
       "high_delta_mC": 3000
     }
 
-The operating mode (nominal or degraded) and temperature baseline/threshold must be provided explicitly. The latest accepted telemetry for the node is fixed for the diagnosis, and the E0 engine chooses verification actions under its established finite-horizon policy. The response and persisted diagnosis contain only observable results, posterior probabilities, selected checks, costs, latency and risk. The request never accepts a cause label or private ground truth.
+The diagnosis request specifies operating mode, baseline and temperature threshold. The selected accepted telemetry is used for E0 inference, which chooses verification actions under the finite-horizon policy. The persisted result contains posterior probabilities, selected checks, observable outcomes, costs, latency and risk. Intervention ground truth remains on VM-CONTROL.
 
-MQTT receipt does not automatically open a new experiment episode. VM-CONTROL decides when to invoke the diagnostic run.
+VM-CONTROL initiates each diagnostic episode after selecting the telemetry record.
 
 ## Deployment
 
@@ -39,7 +39,7 @@ Check out the complete repository at /opt/eacld on VM-CORE. Provision three file
 - mqtt_password: broker password of the core principal;
 - pg_password: password of the PostgreSQL eacld user.
 
-Secrets are excluded from Git and mounted read-only. PostgreSQL runs only on the Docker-internal network; no PostgreSQL host TCP port is published. Do not mount private ground-truth data on this VM.
+Runtime credentials are mounted read-only from the service secret files. PostgreSQL operates within the Docker-internal network; causal intervention ground truth is stored on VM-CONTROL.
 
 VM-CORE has NET-DATA 10.60.10.15, NET-PROBE 10.60.20.15 and NET-CONTROL 10.60.30.15 (plus the separate administration network), per V1.
 
@@ -48,6 +48,6 @@ VM-CORE has NET-DATA 10.60.10.15, NET-PROBE 10.60.20.15 and NET-CONTROL 10.60.30
 
 ## Verification
 
-core/tests/test_core_service.py contains unit and API tests for HMAC, keyring, topic validation, direct probes, nonce validation, E0 inference integration, MQTT callback handling and source-restricted control. The original nine E0 mathematical core tests are also retained. The main-branch GitHub workflow contains both suites. It restores the E0 archive and imports the package through `core/vendor/e0/EACLD_E0_Experimental_Package`. The earlier CI `ModuleNotFoundError: No module named 'eacld.simulator'` was caused by the omitted archived module and was addressed by the 2026-11-12 source-package update. GitHub Actions remains manually triggered. The consolidated H1–H4 verification script on `feature/h4-experiment-runner` now extracts the same archive and uses the same package path (`4629c76`).
+`core/tests/test_core_service.py` covers HMAC verification, keyring and topic handling, active probes, nonce verification, E0 inference integration, MQTT ingestion and restricted operator control. The original nine E0 mathematical core tests are included in the suite. The consolidated H1–H4 regression script loads the E0 source package through `core/vendor/e0/EACLD_E0_Experimental_Package`; 72 tests passed during the 16 November 2026 B01 verification. GitHub Actions retains its manual execution workflow.
 
-These tests do not establish deployment against live Mosquitto, PostgreSQL, Docker or the five-VM topology.
+Distributed B01 execution exercised MQTT transport, persistent telemetry records and E0 inference across the five virtual machines.

@@ -183,9 +183,10 @@ def create_control_server(runner: DiagnosisRunner, gateway: CoreMqtt, *,
             if not self.allowed():
                 self.send_json(403, {"detail": "forbidden"})
                 return
-            if self.path != "/v1/diagnose":
+            if self.path not in ("/v1/diagnose", "/v1/evaluate"):
                 self.send_json(404, {"detail": "not found"})
                 return
+            evaluating = self.path == "/v1/evaluate"
             if not gateway.ready.is_set():
                 self.send_json(503, {"detail": "MQTT not ready"})
                 return
@@ -193,12 +194,26 @@ def create_control_server(runner: DiagnosisRunner, gateway: CoreMqtt, *,
                 n = int(self.headers.get("Content-Length", "-1"))
                 if not 1 <= n <= MAX_REQUEST:
                     raise ValueError("invalid request length")
-                kwargs = _valid_request(json.loads(self.rfile.read(n)), runner.config["modes"])
-            except (ValueError, TypeError, json.JSONDecodeError):
+                payload = json.loads(self.rfile.read(n))
+                random_seed = None
+                if evaluating:
+                    if not isinstance(payload, dict):
+                        raise ValueError("evaluation request must be a JSON object")
+                    payload = dict(payload)
+                    random_seed = payload.pop("random_seed")
+                    if (type(random_seed) is not int or not 0 <= random_seed < 1 << 63
+                            or "selected_telemetry_id" not in payload):
+                        raise ValueError("evaluation needs a seed and exact telemetry")
+                kwargs = _valid_request(payload, runner.config["modes"])
+            except (ValueError, TypeError, KeyError, json.JSONDecodeError):
                 self.send_json(400, {"detail": "invalid diagnosis request"})
                 return
             try:
-                result = runner.diagnose(**kwargs)
+                result = (runner.evaluate_policies(**kwargs, random_seed=random_seed)
+                          if evaluating else runner.diagnose(**kwargs))
+            except ValueError:
+                self.send_json(409, {"detail": "evaluation evidence mismatch"})
+                return
             except LookupError:
                 self.send_json(404, {"detail": "no accepted telemetry for requested node"})
                 return

@@ -58,3 +58,27 @@ class DiagnosisRunner:
         result = self.engine.run("B6_EACLD", live, np.random.default_rng(0))
         self.store.record_diagnosis(result, node_id=node_id, telemetry_id=reading.id)
         return result
+
+    def evaluate_policies(self, *, node_id: int, mode: str, episode_id: str,
+                          block_id: str, baseline_temperature_mC: int,
+                          high_delta_mC: int, selected_telemetry_id: int,
+                          random_seed: int) -> dict:
+        """Evaluate B0-B6 on actual observations from one recorded intervention."""
+        if mode not in self.config["modes"] or type(random_seed) is not int or not 0 <= random_seed < 1 << 63:
+            raise ValueError("invalid evaluation mode or seed")
+        if type(selected_telemetry_id) is not int or selected_telemetry_id < 1:
+            raise ValueError("invalid selected telemetry identifier")
+        recorded = self.store.get_diagnosis(episode_id)
+        if recorded is None:
+            raise LookupError("an accepted diagnosis is required for policy comparison")
+        reading = recorded["reading"]
+        if (recorded["block_id"] != block_id or recorded["node_id"] != node_id
+                or reading.id != selected_telemetry_id):
+            raise ValueError("episode, block, node or telemetry does not match B6 record")
+        from .comparison import evaluate_policies
+        return evaluate_policies(
+            engine=self.engine, cfg=self.config, reading=reading,
+            verifier=self.verifier, episode_id=episode_id, block_id=block_id,
+            mode=mode, baseline_temperature_mC=baseline_temperature_mC,
+            high_delta_mC=high_delta_mC, random_seed=random_seed,
+        )

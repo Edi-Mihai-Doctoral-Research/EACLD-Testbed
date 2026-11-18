@@ -22,6 +22,7 @@ from pydantic import BaseModel, ConfigDict, Field
 import uvicorn
 
 from eacld_contracts.frame import CHALLENGE_RESPONSE_TYPE, TELEMETRY_TYPE
+from eacld_contracts.probe_condition import ProbeCondition
 from eacld_contracts.interfaces import MQTT_BROKER_HOST, MQTT_BROKER_PORT
 from eacld_contracts.topics import raw_topic
 
@@ -43,6 +44,12 @@ class BiasUpdate(BaseModel):
     node_id: int = Field(ge=0, le=65535)
     bias_temperature_mC: int = Field(ge=-(1 << 31), lt=(1 << 31))
     bias_humidity_mPct: int = Field(ge=-(1 << 31), lt=(1 << 31))
+
+
+class ProbeConditionUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    unavailable: bool
+    latency_ms: int = Field(ge=0, le=2000)
 
 
 @dataclass(frozen=True, slots=True)
@@ -253,11 +260,13 @@ async def publish_loop(service: NodesService, publisher: MqttPublisher) -> None:
 
 
 def create_control_app(service: NodesService | None = None, *,
+                       condition: ProbeCondition | None = None,
                        allowed_sources: frozenset[str] =
                        frozenset({"10.60.30.10", "127.0.0.1"})) -> FastAPI:
     """Restricted NET-CONTROL health and experimental node-bias operations."""
     app = FastAPI(title="eacld-nodes control", docs_url=None,
                   redoc_url=None, openapi_url=None)
+    condition = condition or ProbeCondition()
 
     @app.middleware("http")
     async def restrict_source(request: Request, call_next):
@@ -271,6 +280,14 @@ def create_control_app(service: NodesService | None = None, *,
         return {"status": "ok", "service_version": SERVICE_VERSION}
 
     if service is not None:
+        @app.get("/v1/probe-condition")
+        def probe_condition() -> dict:
+            return condition.snapshot()
+
+        @app.post("/v1/probe-condition")
+        def set_probe_condition(command: ProbeConditionUpdate) -> dict:
+            return condition.configure(**command.model_dump())
+
         @app.get("/v1/nodes/bias")
         def get_node_bias(node_id: int) -> dict[str, int]:
             try:
@@ -303,11 +320,12 @@ class SignalManagedServer(uvicorn.Server):
 
 async def serve(service: NodesService, publisher: MqttPublisher) -> None:
     """Run two isolated HTTP listeners and one telemetry task in one process."""
+    condition = ProbeCondition()
     probe = SignalManagedServer(uvicorn.Config(
-        create_probe_app(service), host="0.0.0.0", port=8202,
+        create_probe_app(service, condition), host="0.0.0.0", port=8202,
         log_level="info", access_log=False))
     control = SignalManagedServer(uvicorn.Config(
-        create_control_app(service), host="0.0.0.0", port=8300,
+        create_control_app(service, condition=condition), host="0.0.0.0", port=8300,
         log_level="info", access_log=False))
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()

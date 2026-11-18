@@ -9,6 +9,7 @@ PYTHON="${PYTHON:-python3}"
 printf '%s\n' '[1/4] Operator procedures H1-H4 and shared CLI contracts'
 "$PYTHON" -m unittest discover -s control/tests -p 'test_h?_run.py' -v
 "$PYTHON" -m unittest discover -s control/tests -p 'test_experiment_compatibility.py' -v
+"$PYTHON" -m unittest discover -s control/tests -p 'test_distributed_blocks.py' -v
 
 printf '%s\n' '[2/4] VM-NODES runtime bias control'
 PYTHONPATH="nodes/services/nodes:shared${PYTHONPATH:+:$PYTHONPATH}" \
@@ -27,3 +28,12 @@ for pattern in test_experiment_api.py test_operator_api.py test_h3_core_selectio
   PYTHONPATH="core/services/core:core/vendor/e0/EACLD_E0_Experimental_Package:shared${PYTHONPATH:+:$PYTHONPATH}" \
     "$PYTHON" -m unittest discover -s core/tests -p "$pattern" -v
 done
+
+# Distributed S3 V4 fault and paired-policy regression.
+PYTHONPATH="nodes/services/nodes:shared${PYTHONPATH:+:$PYTHONPATH}" \
+  "$PYTHON" -m unittest discover -s nodes/tests -p test_probe_conditions.py -v
+PYTHONPATH="reference/services/reference:shared${PYTHONPATH:+:$PYTHONPATH}" \
+  "$PYTHON" -m unittest discover -s reference/tests -p test_probe_conditions.py -v
+PYTHONPATH="core/services/core:core/vendor/e0/EACLD_E0_Experimental_Package:shared${PYTHONPATH:+:$PYTHONPATH}" \
+  "$PYTHON" -m unittest discover -s core/tests -p test_comparison.py -v
+"$PYTHON" control/experiments/distributed_blocks.py --plan-only

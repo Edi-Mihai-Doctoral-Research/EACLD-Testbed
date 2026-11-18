@@ -44,8 +44,8 @@ def validate(args: argparse.Namespace) -> int:
             raise ProtocolError(f"invalid {field}")
         if value in (".", "..") or any(ch in value for ch in ("/", "\\", "\x00")):
             raise ProtocolError(f"unsafe {field}")
-    if args.mode != "nominal":
-        raise ProtocolError("H3 runner supports nominal conditions only")
+    if args.mode not in ("nominal", "degraded"):
+        raise ProtocolError("unsupported operating mode")
     if type(args.node_id) is not int or not 0 <= args.node_id <= 65535:
         raise ProtocolError("invalid node_id")
     if type(args.baseline_temperature_mc) is not int or not -(1 << 31) <= args.baseline_temperature_mc < (1 << 31):
@@ -316,7 +316,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--episode-id", required=True)
     p.add_argument("--block-id", required=True)
     p.add_argument("--node-id", type=int, required=True)
-    p.add_argument("--mode", choices=("nominal",), required=True)
+    p.add_argument("--mode", choices=("nominal", "degraded"), required=True)
     p.add_argument("--baseline-temperature-mc", type=int, required=True)
     p.add_argument("--high-delta-mc", type=int, required=True)
     p.add_argument("--humidity-mpct", type=int, default=50000)

@@ -21,6 +21,7 @@ POLICIES = (
     "B0_passive_P0", "B1_passive_P1", "B2_exhaustive", "B3_random",
     "B4_entropy_greedy", "B5_naive_independence", "B6_EACLD",
 )
+H2_BIAS_MC = 6912
 DEFAULT_SEEDS = tuple(range(20261104, 20261114))
 NODE_URL = "http://10.60.30.12:8300"
 REFERENCE_URL = "http://10.60.30.13:8300"
@@ -119,7 +120,8 @@ def _runner_args(episode: Episode, *, output_root: Path, timeout: float,
     if episode.cause == "H1":
         argv += ["--disturbance-temperature-mc", "6912"]
     elif episode.cause == "H2":
-        argv += ["--bias-temperature-mc", "6912"]
+        argv += ["--bias-temperature-mc", str(H2_BIAS_MC),
+                 "--evaluation-random-seed", str(episode.seed)]
     elif episode.cause == "H3":
         argv += ["--offset", "40", "--xor-mask", "37"]
     return argv
@@ -132,6 +134,22 @@ def _json(path: Path) -> dict:
     return value
 
 
+def _h2_comparison_valid(out: Path) -> bool:
+    paths = ("comparison_bias_state.json", "bias_restoration.json")
+    if not all((out / name).is_file() for name in paths):
+        return False
+    checkpoints = _json(out / "comparison_bias_state.json")
+    restored = _json(out / "bias_restoration.json")
+    return (
+        all(isinstance(checkpoints.get(name), dict)
+            and checkpoints[name].get("bias_temperature_mC") == H2_BIAS_MC
+            and checkpoints[name].get("bias_humidity_mPct") == 0
+            for name in ("before", "after"))
+        and restored.get("bias_temperature_mC") == 0
+        and restored.get("bias_humidity_mPct") == 0
+    )
+
+
 def _completed(out: Path, episode: Episode) -> bool:
     if not out.exists():
         return False
@@ -141,6 +159,9 @@ def _completed(out: Path, episode: Episode) -> bool:
     return (manifest.get("status") == "recorded"
             and manifest.get("policy_evaluation_status") == "recorded"
             and manifest.get("probe_restored") is True
+            and (episode.cause != "H2" or
+                 (manifest.get("policy_comparison_stage") == "active_sensor_bias"
+                  and _h2_comparison_valid(out)))
             and manifest.get("episode_id") == episode.episode_id
             and evaluation.get("episode_id") == episode.episode_id
             and evaluation.get("mode") == episode.mode
@@ -203,7 +224,13 @@ def run_episode(episode: Episode, *, output_root: Path, timeout: float,
             "selected_telemetry_id": selected,
             "random_seed": episode.seed,
         }
-        evaluation = request("POST", f"{CORE_URL}/v1/evaluate", evaluation_request)
+        if episode.cause == "H2":
+            if (manifest.get("policy_comparison_stage") != "active_sensor_bias"
+                    or not _h2_comparison_valid(out)):
+                raise ProtocolError("H2 comparison evidence is incomplete")
+            evaluation = _json(out / "policy_evaluation.json")
+        else:
+            evaluation = request("POST", f"{CORE_URL}/v1/evaluate", evaluation_request)
         if (evaluation.get("episode_id") != episode.episode_id
                 or evaluation.get("block_id") != episode.block
                 or evaluation.get("mode") != episode.mode
@@ -212,7 +239,8 @@ def run_episode(episode: Episode, *, output_root: Path, timeout: float,
                 or {v.get("policy") for v in evaluation.get("policies", [])} != set(POLICIES)
                 or len(evaluation.get("policies", [])) != len(POLICIES)):
             raise ProtocolError("VM-CORE policy comparison is not paired to the episode")
-        save_json(out / "policy_evaluation.json", evaluation)
+        if episode.cause != "H2":
+            save_json(out / "policy_evaluation.json", evaluation)
         save_json(out / "probe_profile.json", {
             "seed": episode.seed, "block_id": episode.block,
             "mode": episode.mode, "cause": episode.cause,

@@ -88,6 +88,69 @@ class PlanTests(unittest.TestCase):
 
 
 class ExecutionTests(unittest.TestCase):
+    def test_h2_comparison_is_recorded_during_active_intervention(self):
+        case = next(e for e in make_plan(DEFAULT_SEEDS)
+                    if e.mode == "nominal" and e.cause == "H2")
+        states = {service: {"unavailable": False, "latency_ms": 0, "revision": 0}
+                  for service in ("nodes", "reference")}
+
+        class Adapter:
+            def __init__(self, root):
+                self.root = root
+
+            def request(self, method, url, body=None):
+                if "/v1/probe-condition" in url:
+                    service = "nodes" if "10.60.30.12" in url else "reference"
+                    if method == "POST":
+                        states[service].update(body)
+                        states[service]["revision"] += 1
+                    return dict(states[service])
+                if url.endswith("/v1/evaluate"):
+                    raise AssertionError("H2 evaluation is owned by the scenario runner")
+                raise AssertionError(url)
+
+            def executor(self, argv, **_):
+                assert "--evaluation-random-seed" in argv
+                assert argv[argv.index("--evaluation-random-seed") + 1] == str(case.seed)
+                out = self.root / case.episode_id
+                out.mkdir()
+                (out / "manifest.json").write_text(json.dumps({
+                    "status": "recorded", "episode_id": case.episode_id,
+                    "telemetry_id": 13,
+                    "policy_comparison_stage": "active_sensor_bias",
+                }))
+                (out / "core_diagnosis_record.json").write_text(json.dumps({
+                    "episode_id": case.episode_id,
+                    "telemetry": {"telemetry_id": 13},
+                }))
+                (out / "policy_evaluation.json").write_text(json.dumps({
+                    "episode_id": case.episode_id, "block_id": case.block,
+                    "mode": case.mode, "telemetry_id": 13,
+                    "random_seed": case.seed,
+                    "policies": [{"policy": p} for p in POLICIES],
+                }))
+                (out / "comparison_bias_state.json").write_text(json.dumps({
+                    "before": {"bias_temperature_mC": 6912, "bias_humidity_mPct": 0},
+                    "after": {"bias_temperature_mC": 6912, "bias_humidity_mPct": 0},
+                }))
+                (out / "bias_restoration.json").write_text(json.dumps({
+                    "bias_temperature_mC": 0, "bias_humidity_mPct": 0,
+                }))
+                return SimpleNamespace(returncode=0, stderr="")
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            adapter = Adapter(root)
+            run_episode(case, output_root=root, timeout=10, node_id=1,
+                        request=adapter.request, executor=adapter.executor)
+            self.assertTrue(all(s["unavailable"] is False and s["latency_ms"] == 0
+                                for s in states.values()))
+            manifest = json.loads((root / case.episode_id / "manifest.json").read_text())
+            self.assertEqual(manifest["policy_comparison_stage"], "active_sensor_bias")
+            self.assertTrue(manifest["probe_restored"])
+            run_episode(case, output_root=root, timeout=10, node_id=1,
+                        request=adapter.request, executor=adapter.executor)
+
     def test_mode_is_real_and_restored_before_acceptance(self):
         case = next(e for e in make_plan(DEFAULT_SEEDS) if
                     e.mode == "degraded" and e.cause == "H3")

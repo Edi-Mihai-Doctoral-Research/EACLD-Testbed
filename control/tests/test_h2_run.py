@@ -17,13 +17,15 @@ spec.loader.exec_module(h2)
 
 
 class Scenario:
-    def __init__(self, *, failed_diagnosis=False, mismatch_once=False):
+    def __init__(self, *, failed_diagnosis=False, mismatch_once=False,
+                 failed_evaluation=False):
         self.reset = False
         self.bias = 0
         self.revision = 0
         self.history = []
         self.diagnosis_requests = []
         self.failed_diagnosis = failed_diagnosis
+        self.failed_evaluation = failed_evaluation
         self.mismatch_once = mismatch_once
         self.used_id = None
         self.latest_id = 12
@@ -62,6 +64,20 @@ class Scenario:
                 raise h2.ApiError(409, "telemetry changed before diagnosis")
             self.used_id = body["expected_telemetry_id"]
             return {"episode_id": "H2-001", "decision": "unresolved"}
+        if url.endswith("/v1/evaluate"):
+            if self.bias != 6912:
+                raise AssertionError("H2 comparison requires active sensor bias")
+            if self.failed_evaluation:
+                raise h2.ApiError(503, "comparison unavailable")
+            return {
+                "episode_id": "H2-001", "block_id": "B01", "mode": "nominal",
+                "telemetry_id": self.used_id, "random_seed": body["random_seed"],
+                "policies": [{"policy": p} for p in (
+                    "B0_passive_P0", "B1_passive_P1", "B2_exhaustive",
+                    "B3_random", "B4_entropy_greedy",
+                    "B5_naive_independence", "B6_EACLD",
+                )],
+            }
         if "/v1/diagnosis?" in url:
             return {
                 "episode_id": "H2-001", "block_id": "B01", "node_id": 1,
@@ -99,6 +115,7 @@ class H2RunnerTests(unittest.TestCase):
             output_root=Path(root), control_dir=Path(root),
             core_url="http://10.60.30.15:8300",
             nodes_control_url="http://10.60.30.12:8300",
+            evaluation_random_seed=None,
         )
 
     def test_records_measured_bias_without_private_truth_leaking_to_core(self):
@@ -151,6 +168,51 @@ class H2RunnerTests(unittest.TestCase):
             self.assertEqual(scenario.bias, 0)
             self.assertTrue((Path(tmp) / "H2-001" / "failure.json").exists())
             self.assertFalse((Path(tmp) / "H2-001" / "manifest.json").exists())
+
+    def test_comparison_uses_active_bias_and_selected_telemetry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            args = self.args(tmp)
+            args.evaluation_random_seed = 20261104
+            scenario = Scenario()
+            summary = h2.run_h2(
+                args, request=scenario.request, control=scenario.control,
+                command=lambda *_: "a" * 40, sleeper=lambda _: None,
+            )
+            requests = scenario.history
+            evaluated = next(i for i, item in enumerate(requests)
+                             if item[0] == "POST" and item[1].endswith("/v1/evaluate"))
+            restored = next(i for i, item in enumerate(requests)
+                            if item[0] == "POST"
+                            and item[1].endswith("/v1/nodes/bias")
+                            and item[2]["bias_temperature_mC"] == 0)
+            self.assertLess(evaluated, restored)
+            body = requests[evaluated][2]
+            self.assertEqual(body["selected_telemetry_id"], 12)
+            self.assertEqual(body["random_seed"], args.evaluation_random_seed)
+            self.assertNotIn("cause", body)
+            self.assertEqual(summary["policy_comparison_stage"], "active_sensor_bias")
+            folder = Path(tmp) / "H2-001"
+            states = json.loads((folder / "comparison_bias_state.json").read_text())
+            self.assertEqual(states["before"]["bias_temperature_mC"], 6912)
+            self.assertEqual(states["after"]["bias_temperature_mC"], 6912)
+            result = json.loads((folder / "policy_evaluation.json").read_text())
+            self.assertEqual(result["telemetry_id"], 12)
+            self.assertEqual(scenario.bias, 0)
+
+    def test_comparison_failure_still_restores_sensor(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            args = self.args(tmp)
+            args.evaluation_random_seed = 20261104
+            scenario = Scenario(failed_evaluation=True)
+            with self.assertRaises(h2.ApiError):
+                h2.run_h2(
+                    args, request=scenario.request, control=scenario.control,
+                    command=lambda *_: "a" * 40, sleeper=lambda _: None,
+                )
+            self.assertEqual(scenario.bias, 0)
+            folder = Path(tmp) / "H2-001"
+            self.assertTrue((folder / "failure.json").exists())
+            self.assertFalse((folder / "manifest.json").exists())
 
     def test_invalid_parameters_cannot_change_process_or_node(self):
         with tempfile.TemporaryDirectory() as tmp:

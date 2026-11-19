@@ -49,6 +49,10 @@ def validate(args: argparse.Namespace) -> None:
         raise ProtocolError("biased temperature is outside wire range")
     if measured < args.baseline_temperature_mc + args.high_delta_mc:
         raise ProtocolError("bias does not cross the diagnostic temperature threshold")
+    evaluation_seed = getattr(args, "evaluation_random_seed", None)
+    if evaluation_seed is not None and (type(evaluation_seed) is not int
+            or not 0 <= evaluation_seed < (1 << 63)):
+        raise ProtocolError("invalid evaluation random seed")
 
 
 def _assert_bias(payload: dict, node_id: int, temperature: int, humidity: int) -> None:
@@ -92,6 +96,7 @@ def run_h2(args: argparse.Namespace, *, request=request_json,
            control=control_command, command=run_command,
            sleeper=time.sleep, clock=time.monotonic) -> dict:
     validate(args)
+    evaluation_seed = getattr(args, "evaluation_random_seed", None)
     out = args.output_root.expanduser().resolve() / args.episode_id
     out.mkdir(parents=True, exist_ok=False)
 
@@ -244,6 +249,31 @@ def run_h2(args: argparse.Namespace, *, request=request_json,
             "bias_humidity_mPct": 0,
             "private_process": private,
         })
+        if evaluation_seed is not None:
+            active_before = request("GET", bias_query)
+            _assert_bias(active_before, args.node_id, args.bias_temperature_mc, 0)
+            comparison = request("POST", f"{core_url}/v1/evaluate", {
+                "node_id": args.node_id, "mode": args.mode,
+                "episode_id": args.episode_id, "block_id": args.block_id,
+                "baseline_temperature_mC": args.baseline_temperature_mc,
+                "high_delta_mC": args.high_delta_mc,
+                "selected_telemetry_id": selected["telemetry_id"],
+                "random_seed": evaluation_seed,
+            })
+            active_after = request("GET", bias_query)
+            _assert_bias(active_after, args.node_id, args.bias_temperature_mc, 0)
+            if (comparison.get("episode_id") != args.episode_id
+                    or comparison.get("block_id") != args.block_id
+                    or comparison.get("mode") != args.mode
+                    or comparison.get("telemetry_id") != selected["telemetry_id"]
+                    or comparison.get("random_seed") != evaluation_seed
+                    or not isinstance(comparison.get("policies"), list)
+                    or len(comparison["policies"]) != 7):
+                raise ProtocolError("comparison identity does not match H2 episode")
+            save_json(out / "comparison_bias_state.json", {
+                "before": active_before, "after": active_after,
+            })
+            save_json(out / "policy_evaluation.json", comparison)
     except BaseException as exc:
         failure = exc
     finally:
@@ -282,6 +312,8 @@ def run_h2(args: argparse.Namespace, *, request=request_json,
         "git_commit": commit, "completed_at_utc": utc_now(),
         "output_directory": str(out),
     }
+    if evaluation_seed is not None:
+        summary["policy_comparison_stage"] = "active_sensor_bias"
     save_json(out / "manifest.json", summary)
     return summary
 
@@ -298,6 +330,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--humidity-mpct", type=int, default=50000)
     p.add_argument("--timeout-seconds", type=float, default=60)
     p.add_argument("--poll-seconds", type=float, default=1)
+    p.add_argument("--evaluation-random-seed", type=int)
     p.add_argument("--output-root", type=Path, default=Path.home() / "eacld-experiments")
     p.add_argument("--control-dir", type=Path, default=CONTROL_DIR)
     p.add_argument("--core-url", default=CORE_URL)
